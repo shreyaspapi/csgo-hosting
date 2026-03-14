@@ -2,7 +2,6 @@
 
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -16,130 +15,90 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const NAV_LINKS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/queue", label: "Play" },
-  { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/teams", label: "Teams" },
-] as const;
-
-function SteamIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 256 259"
-      className={className}
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M128.007 0C58.652 0 2.076 53.308.085 121.392l68.91 28.49c5.857-3.981 12.91-6.327 20.51-6.327.68 0 1.348.028 2.01.07l30.711-44.468v-.624c0-26.644 21.69-48.335 48.336-48.335 26.644 0 48.334 21.691 48.334 48.372 0 26.645-21.69 48.336-48.37 48.336h-1.12l-43.752 31.24c0 .53.036 1.058.036 1.573 0 19.96-16.222 36.2-36.2 36.2-17.654 0-32.39-12.71-35.559-29.467L4.535 163.57C22.608 217.32 71.026 258.372 128.007 258.372c70.69 0 127.993-57.303 127.993-128.004C256 59.36 198.697 0 128.007 0zM80.45 207.805l-15.617-6.455c2.77 5.77 7.596 10.636 13.924 13.437 13.724 6.074 29.768-.282 35.842-14.006 2.934-6.631 2.978-13.9.114-20.571-2.858-6.67-8.168-11.86-14.8-14.8-6.545-2.89-13.56-2.77-19.71-.398l16.148 6.68c10.11 4.476 14.668 16.366 10.185 26.47-4.477 10.105-16.353 14.663-26.486 10.188v-.545zm113.113-98.452c0-17.738-14.444-32.188-32.224-32.188-17.745 0-32.189 14.45-32.189 32.188 0 17.745 14.444 32.189 32.189 32.189 17.78 0 32.224-14.444 32.224-32.189zm-56.346.063c0-13.418 10.87-24.29 24.19-24.29 13.37 0 24.196 10.872 24.196 24.29 0 13.38-10.826 24.253-24.196 24.253-13.32 0-24.19-10.873-24.19-24.253z" />
-    </svg>
-  );
-}
+const SteamIcon = () => (
+  <svg className="size-5" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.606 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.455 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.252 0-2.265-1.014-2.265-2.265z" />
+  </svg>
+);
 
 export default function Navbar() {
   const { data: session } = useSession();
 
   return (
-    <nav
-      className={cn(
-        "sticky top-0 z-50 w-full border-b border-border/40",
-        "bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60"
-      )}
-    >
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-600 text-sm font-bold text-white shadow-lg shadow-orange-500/20">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
             FR
           </div>
-          <span className="text-xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-xl font-bold text-transparent">
             FluidRush
           </span>
         </Link>
 
-        {/* Nav Links - hidden on mobile */}
+        {/* Nav links */}
         {session && (
-          <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(({ href, label }) => (
-              <Button
-                key={href}
-                variant="ghost"
-                size="sm"
-                render={<Link href={href} />}
-              >
-                {label}
-              </Button>
-            ))}
+          <div className="hidden items-center gap-1 md:flex">
+            <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>
+              Dashboard
+            </Button>
+            <Button variant="ghost" size="sm" render={<Link href="/queue" />}>
+              Play
+            </Button>
+            <Button variant="ghost" size="sm" render={<Link href="/leaderboard" />}>
+              Leaderboard
+            </Button>
+            <Button variant="ghost" size="sm" render={<Link href="/teams" />}>
+              Teams
+            </Button>
           </div>
         )}
 
-        {/* Right side */}
+        {/* Right: user menu or sign-in */}
         {session ? (
-          <div className="flex items-center gap-3">
-            {/* ELO Badge - visible on sm+ */}
-            <Badge
-              variant="outline"
-              className="hidden sm:inline-flex border-orange-500/30 bg-orange-500/10 text-orange-400"
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button className={cn(
+                  "flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2 text-sm",
+                  "transition-colors hover:bg-muted focus:outline-none"
+                )} />
+              }
             >
-              ELO {session.user.elo}
-            </Badge>
+              <Avatar size="sm">
+                <AvatarImage src={session.user.image} alt={session.user.name} />
+                <AvatarFallback>{session.user.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <span className="hidden font-medium sm:block">{session.user.name}</span>
+              <Badge variant="outline" className="hidden border-primary/30 bg-primary/10 text-primary sm:inline-flex">
+                {session.user.elo} ELO
+              </Badge>
+            </DropdownMenuTrigger>
 
-            {/* User Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5",
-                  "bg-muted/50 hover:bg-muted transition-colors",
-                  "outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                )}
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel className="text-muted-foreground text-xs">
+                Signed in as {session.user.name}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link href="/dashboard" />}>
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/queue" />}>
+                Find Match
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={() => signOut({ callbackUrl: "/" })}
               >
-                <Avatar size="sm">
-                  <AvatarImage
-                    src={session.user.image}
-                    alt={session.user.name}
-                  />
-                  <AvatarFallback>
-                    {session.user.name?.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:block text-sm font-medium text-foreground">
-                  {session.user.name}
-                </span>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent align="end" sideOffset={8} className="w-48">
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col gap-0.5">
-                    <p className="text-sm font-medium text-foreground">
-                      {session.user.name}
-                    </p>
-                    <p className="text-xs text-orange-400">
-                      ELO: {session.user.elo}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem render={<Link href="/dashboard" />}>
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={() => signOut({ callbackUrl: "/" })}
-                >
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            render={<a href="/api/auth/steam" />}
-            className="gap-2"
-          >
-            <SteamIcon className="size-4" />
+          <Button render={<a href="/api/auth/steam" />} className="gap-2">
+            <SteamIcon />
             Sign in with Steam
           </Button>
         )}

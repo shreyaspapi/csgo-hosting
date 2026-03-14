@@ -3,9 +3,12 @@ import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { cn } from "@/lib/utils";
-import { Geist } from "next/font/google";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-sans",
+  weight: "100 900",
+});
 
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
@@ -25,14 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("dark", "font-sans", geist.variable)}>
-      <body
-        className={cn(
-          geist.variable,
-          geistMono.variable,
-          "antialiased min-h-screen font-sans"
-        )}
-      >
+    <html lang="en" className="dark">
+      <body className={cn(geistSans.variable, geistMono.variable, "antialiased min-h-screen")}>
         <Providers>{children}</Providers>
       </body>
     </html>

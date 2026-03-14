@@ -3,30 +3,21 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
-
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
-  TableHeader,
-  TableRow,
-  TableHead,
   TableBody,
   TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-interface LeaderboardPlayer {
+interface Player {
   id: string;
   steamId: string;
   displayName: string;
@@ -40,193 +31,113 @@ interface LeaderboardPlayer {
   winRate: number;
 }
 
-const RANK_STYLES: Record<number, { badge: string; row: string; icon: string }> = {
-  1: {
-    badge: "border-yellow-500/40 bg-yellow-500/15 text-yellow-400",
-    row: "bg-yellow-500/5",
-    icon: "🥇",
-  },
-  2: {
-    badge: "border-gray-400/40 bg-gray-400/15 text-gray-300",
-    row: "bg-gray-400/5",
-    icon: "🥈",
-  },
-  3: {
-    badge: "border-orange-700/40 bg-orange-700/15 text-orange-400",
-    row: "bg-orange-700/5",
-    icon: "🥉",
-  },
-};
-
-function SkeletonRows() {
-  return (
-    <>
-      {Array.from({ length: 10 }).map((_, i) => (
-        <TableRow key={i}>
-          <TableCell>
-            <Skeleton className="h-5 w-8" />
-          </TableCell>
-          <TableCell>
-            <div className="flex items-center gap-3">
-              <Skeleton className="size-8 rounded-full" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-5 w-12 mx-auto" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-8 mx-auto" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-8 mx-auto" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-10 mx-auto" />
-          </TableCell>
-        </TableRow>
-      ))}
-    </>
-  );
-}
+const MEDALS = ["🥇", "🥈", "🥉"];
 
 export default function LeaderboardPage() {
   const { data: session } = useSession();
-  const [players, setPlayers] = useState<LeaderboardPlayer[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/leaderboard?limit=50")
-      .then((res) => res.json())
-      .then((data) => {
-        setPlayers(data.players);
-        setLoading(false);
-      })
+      .then(r => r.json())
+      .then(d => { setPlayers(d.players ?? []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-
       <div className="mx-auto max-w-4xl px-4 py-12">
         <div className="mb-10 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
-          <p className="mt-2 text-muted-foreground">
-            Top players ranked by ELO
-          </p>
+          <h1 className="text-3xl font-bold">Leaderboard</h1>
+          <p className="mt-1 text-muted-foreground">Top players ranked by ELO</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Rankings</CardTitle>
+            <CardTitle className="text-base text-muted-foreground">Top 50 Players</CardTitle>
           </CardHeader>
-          <CardContent>
-            {!loading && players.length === 0 ? (
-              <div className="py-12 text-center">
-                <p className="text-lg text-muted-foreground">No players yet</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Be the first to play a match and appear on the leaderboard!
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-16 text-center">Rank</TableHead>
+                  <TableHead>Player</TableHead>
+                  <TableHead className="text-center">ELO</TableHead>
+                  <TableHead className="text-center">W</TableHead>
+                  <TableHead className="text-center">L</TableHead>
+                  <TableHead className="text-center">Win %</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="mx-auto h-4 w-6" /></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="size-8 rounded-full" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                      </TableCell>
+                      <TableCell><Skeleton className="mx-auto h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="mx-auto h-4 w-8" /></TableCell>
+                      <TableCell><Skeleton className="mx-auto h-4 w-8" /></TableCell>
+                      <TableCell><Skeleton className="mx-auto h-4 w-10" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : players.length === 0 ? (
                   <TableRow>
-                    <TableHead className="w-16">Rank</TableHead>
-                    <TableHead>Player</TableHead>
-                    <TableHead className="text-center">ELO</TableHead>
-                    <TableHead className="text-center">Wins</TableHead>
-                    <TableHead className="text-center">Losses</TableHead>
-                    <TableHead className="text-center">Win Rate</TableHead>
+                    <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
+                      No players yet. Be the first to play a match!
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <SkeletonRows />
-                  ) : (
-                    players.map((player) => {
-                      const isCurrentUser = session?.user?.id === player.id;
-                      const rankStyle = RANK_STYLES[player.rank];
-
-                      return (
-                        <TableRow
-                          key={player.id}
-                          className={`
-                            ${rankStyle?.row ?? ""}
-                            ${isCurrentUser ? "ring-1 ring-primary/50 ring-inset" : ""}
-                          `}
-                        >
-                          {/* Rank */}
-                          <TableCell>
-                            {rankStyle ? (
-                              <Badge
-                                variant="outline"
-                                className={`font-bold ${rankStyle.badge}`}
-                              >
-                                {rankStyle.icon} #{player.rank}
+                ) : (
+                  players.map((p) => {
+                    const isMe = session?.user?.id === p.id;
+                    const medal = MEDALS[p.rank - 1];
+                    return (
+                      <TableRow
+                        key={p.id}
+                        className={cn(
+                          isMe && "ring-1 ring-inset ring-primary/40 bg-primary/5",
+                          p.rank === 1 && "bg-yellow-500/5",
+                          p.rank === 2 && "bg-zinc-400/5",
+                          p.rank === 3 && "bg-orange-700/5",
+                        )}
+                      >
+                        <TableCell className="text-center font-bold">
+                          {medal ? (
+                            <span className="text-base">{medal}</span>
+                          ) : (
+                            <span className="text-muted-foreground">#{p.rank}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar size="sm">
+                              <AvatarImage src={p.avatar} alt={p.displayName} />
+                              <AvatarFallback>{p.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{p.displayName}</span>
+                            {isMe && (
+                              <Badge variant="outline" className="border-primary/30 text-primary text-[10px] px-1.5">
+                                You
                               </Badge>
-                            ) : (
-                              <span className="text-muted-foreground font-medium pl-1">
-                                #{player.rank}
-                              </span>
                             )}
-                          </TableCell>
-
-                          {/* Player */}
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar size="default">
-                                <AvatarImage
-                                  src={player.avatar}
-                                  alt={player.displayName}
-                                />
-                                <AvatarFallback>
-                                  {player.displayName.slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium truncate max-w-[200px]">
-                                {player.displayName}
-                              </span>
-                              {isCurrentUser && (
-                                <Badge
-                                  variant="outline"
-                                  className="border-primary/30 bg-primary/10 text-primary"
-                                >
-                                  You
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          {/* ELO */}
-                          <TableCell className="text-center">
-                            <span className="font-bold text-primary">
-                              {player.elo}
-                            </span>
-                          </TableCell>
-
-                          {/* Wins */}
-                          <TableCell className="text-center text-green-400">
-                            {player.wins}
-                          </TableCell>
-
-                          {/* Losses */}
-                          <TableCell className="text-center text-red-400">
-                            {player.losses}
-                          </TableCell>
-
-                          {/* Win Rate */}
-                          <TableCell className="text-center">
-                            {player.winRate}%
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center font-bold text-primary">{p.elo}</TableCell>
+                        <TableCell className="text-center text-green-400">{p.wins}</TableCell>
+                        <TableCell className="text-center text-destructive">{p.losses}</TableCell>
+                        <TableCell className="text-center">{p.winRate}%</TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>
