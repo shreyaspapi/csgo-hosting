@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { ServerStatus, MatchStatus } from "@prisma/client";
 import { configureMatchServer } from "@/lib/rcon";
+import { getMatchTeamNames } from "@/lib/match-teams";
 
 /**
  * POST /api/servers/ready
@@ -43,6 +44,15 @@ export async function POST(req: NextRequest) {
     const match = await prisma.match.findUnique({
       where: { id: matchId },
       include: {
+        queueEntries: {
+          include: {
+            team: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
         players: {
           include: {
             user: {
@@ -66,6 +76,7 @@ export async function POST(req: NextRequest) {
 
     const teamA = match.players.filter((p) => p.team === "TEAM_A");
     const teamB = match.players.filter((p) => p.team === "TEAM_B");
+    const { teamAName, teamBName } = getMatchTeamNames(match.queueEntries);
 
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL || "https://fluidrush.com";
@@ -81,8 +92,8 @@ export async function POST(req: NextRequest) {
         {
           matchId: match.id,
           map: match.map,
-          teamAName: "Team A",
-          teamBName: "Team B",
+          teamAName,
+          teamBName,
           teamASteamIds: teamA.map((p) => p.user.steamId),
           teamBSteamIds: teamB.map((p) => p.user.steamId),
           webhookUrl: `${appUrl}/api/get5/webhook`,

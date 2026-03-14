@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getMatchTeamNames } from "@/lib/match-teams";
 
 /**
  * GET /api/get5/match-config/[matchId]
@@ -14,6 +15,15 @@ export async function GET(
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {
+      queueEntries: {
+        include: {
+          team: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
       players: {
         include: {
           user: {
@@ -36,6 +46,7 @@ export async function GET(
 
   const teamA = match.players.filter((p) => p.team === "TEAM_A");
   const teamB = match.players.filter((p) => p.team === "TEAM_B");
+  const { teamAName, teamBName } = getMatchTeamNames(match.queueEntries);
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL || "https://fluidrush.com";
@@ -50,13 +61,13 @@ export async function GET(
     players_per_team: 5,
     min_players_to_ready: 1,
     team1: {
-      name: "Team A",
+      name: teamAName,
       players: Object.fromEntries(
         teamA.map((p) => [p.user.steamId, p.user.displayName])
       ),
     },
     team2: {
-      name: "Team B",
+      name: teamBName,
       players: Object.fromEntries(
         teamB.map((p) => [p.user.steamId, p.user.displayName])
       ),

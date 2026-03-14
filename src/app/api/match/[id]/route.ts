@@ -4,12 +4,13 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { COMPETITIVE_MAPS } from "@/lib/maps";
 import { resolveWinningMap } from "@/lib/matchmaking";
+import { getMatchTeamNames } from "@/lib/match-teams";
 
 /**
  * GET /api/match/[id] - Get match details
  */
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
@@ -55,6 +56,15 @@ export async function GET(
           status: true,
         },
       },
+      queueEntries: {
+        include: {
+          team: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -71,10 +81,13 @@ export async function GET(
     match.status === "READY_CHECK"
       ? resolveWinningMap(match.mapVotes)
       : match.map;
+  const { teamAName, teamBName } = getMatchTeamNames(match.queueEntries);
 
   return NextResponse.json({
     ...match,
     selectedMap,
+    teamAName,
+    teamBName,
     voteCounts,
   });
 }

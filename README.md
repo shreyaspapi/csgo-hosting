@@ -31,16 +31,16 @@ A competitive CS:GO 5v5 matchmaking platform (like FaceIT). Players sign in with
 
 ## Features (Planned / Post-MVP)
 
-- [ ] **Team Queue** - Pre-made teams of 5 queue against each other
+- [x] **Team Queue** - Pre-made teams of 5 queue against each other
 - [ ] **Captain Draft** - Top 2 ELO players are captains, take turns picking
-- [ ] **Map Voting** - Players vote on map before match starts
+- [x] **Map Voting** - Players vote on map before match starts
 - [ ] **Detailed Stats** - Per-match K/D/A, headshot %, ADR, HLTV rating
 - [ ] **Discord Bot** - Match notifications, queue status, results in Discord
 - [ ] **Anti-Cheat Check** - VAC ban check on signup, game hours verification
-- [ ] **Admin Panel** - Ban players, force-end matches, manage servers
+- [x] **Admin Panel** - Ban players, force-end matches, manage servers
 - [ ] **Chat System** - In-queue lobby chat
 - [ ] **Seasons / Ranking Resets** - Monthly/seasonal ELO resets with rewards
-- [ ] **Player Profiles** - Public profiles with detailed stats and graphs
+- [x] **Player Profiles** - Public profiles with match history and ranking overview
 - [ ] **Match Demos** - Auto-upload match demo files
 - [ ] **Knife Round** - Side selection via knife round (get5 built-in)
 - [ ] **Overtime** - MR3 overtime for tied matches

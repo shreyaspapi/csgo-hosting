@@ -5,76 +5,35 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(0.98 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(0.98 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.65 0.18 45);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.96 0.03 45);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.65 0.18 45);
-  --chart-1: oklch(0.65 0.18 45);
-  --chart-2: oklch(0.6 0.16 30);
-  --chart-3: oklch(0.55 0.2 20);
-  --chart-4: oklch(0.7 0.14 60);
-  --chart-5: oklch(0.5 0.18 35);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.65 0.18 45);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.65 0.18 45);
-}
-
-.dark {
-  --background: oklch(0.105 0.008 265);
-  --foreground: oklch(0.955 0 0);
-  --card: oklch(0.145 0.008 265);
-  --card-foreground: oklch(0.955 0 0);
-  --popover: oklch(0.145 0.008 265);
-  --popover-foreground: oklch(0.955 0 0);
-  --primary: oklch(0.7 0.18 45);
-  --primary-foreground: oklch(0.12 0 0);
-  --secondary: oklch(0.22 0.008 265);
-  --secondary-foreground: oklch(0.955 0 0);
-  --muted: oklch(0.22 0.008 265);
-  --muted-foreground: oklch(0.62 0 0);
-  --accent: oklch(0.25 0.025 45);
-  --accent-foreground: oklch(0.955 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.18 45);
-  --chart-1: oklch(0.7 0.18 45);
-  --chart-2: oklch(0.62 0.16 30);
-  --chart-3: oklch(0.56 0.22 20);
-  --chart-4: oklch(0.75 0.14 60);
-  --chart-5: oklch(0.52 0.18 35);
-  --sidebar: oklch(0.145 0.008 265);
-  --sidebar-foreground: oklch(0.955 0 0);
-  --sidebar-primary: oklch(0.7 0.18 45);
-  --sidebar-primary-foreground: oklch(0.12 0 0);
-  --sidebar-accent: oklch(0.25 0.025 45);
-  --sidebar-accent-foreground: oklch(0.955 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.7 0.18 45);
+  --background: rgba(30, 30, 30, 0.85);
+  --foreground: #e1e1e1;
+  --card: rgba(45, 45, 45, 0.9);
+  --card-foreground: #e1e1e1;
+  --popover: rgba(35, 35, 35, 0.95);
+  --popover-foreground: #e1e1e1;
+  --primary: #FF9D00;
+  --primary-foreground: #000000;
+  --secondary: #4a4a4a;
+  --secondary-foreground: #e1e1e1;
+  --muted: #3a3a3a;
+  --muted-foreground: #888888;
+  --accent: #FF9D00;
+  --accent-foreground: #000000;
+  --destructive: #af3e3e;
+  --border: #444444;
+  --input: rgba(20, 20, 20, 0.5);
+  --ring: #FF9D00;
+  --radius: 0px;
+  
+  --valve-orange: #FF9D00;
+  --terminal-green: #4CAF50;
+  --vgui-grey: #4c4c4c;
 }
 
 @theme inline {
-  --font-sans: var(--font-sans);
+  --font-sans: "Tahoma", "Verdana", "Segoe UI", sans-serif;
+  --font-mono: "Courier New", "Lucida Console", monospace;
+  
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -93,31 +52,74 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
+  
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    border-radius: 0 !important;
   }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply bg-transparent text-foreground font-sans;
+    background-image: 
+      linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)),
+      url('https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Scanline Overlay */
+  body::before {
+    content: " ";
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+    z-index: 9999;
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    opacity: 0.3;
   }
 }
+
+@layer components {
+  .vgui-panel {
+    @apply bg-background border border-border shadow-lg;
+    box-shadow: inset 1px 1px 0px rgba(255,255,255,0.05), 2px 2px 5px rgba(0,0,0,0.5);
+  }
+
+  .vgui-button {
+    @apply uppercase font-bold tracking-tight transition-all;
+    border: 1px solid #555;
+    background: linear-gradient(to bottom, #4c4c4c 0%, #3a3a3a 100%);
+    box-shadow: inset 1px 1px 0px rgba(255,255,255,0.1);
+  }
+
+  .vgui-button:hover {
+    @apply text-primary border-primary;
+    background: linear-gradient(to bottom, #5a5a5a 0%, #444444 100%);
+  }
+
+  .vgui-button:active {
+    background: #2a2a2a;
+    box-shadow: inset 2px 2px 4px rgba(0,0,0,0.5);
+  }
+
+  .vgui-input {
+    @apply bg-input border border-border text-foreground font-mono px-2 py-1;
+    box-shadow: inset 2px 2px 4px rgba(0,0,0,0.5);
+  }
+}
+

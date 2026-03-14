@@ -19,6 +19,8 @@ model User {
   wins        Int      @default(0)
   losses      Int      @default(0)
   draws       Int      @default(0)
+  isBanned    Boolean  @default(false)
+  banReason   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -58,6 +60,7 @@ model TeamMember {
   joinedAt DateTime @default(now())
 
   @@unique([teamId, userId])
+  @@unique([userId])
   @@index([userId])
 }
 

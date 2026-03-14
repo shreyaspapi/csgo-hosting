@@ -84,7 +84,8 @@ export async function configureMatchServer(
     webhookUrl,
   } = matchConfig;
 
-  // Build get5 match config JSON
+  // Build get5 match config JSON (used by get5_loadmatch_url endpoint)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const get5Config = {
     matchid: matchId,
     num_maps: 1,

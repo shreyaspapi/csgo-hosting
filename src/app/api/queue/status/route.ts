@@ -12,7 +12,6 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Check for an active queue entry
   const queueEntry = await prisma.queueEntry.findFirst({
     where: {
       userId: session.user.id,
@@ -30,15 +29,41 @@ export async function GET() {
     },
   });
 
-  if (!queueEntry) {
+  const teamMembership = await prisma.teamMember.findUnique({
+    where: { userId: session.user.id },
+    include: {
+      team: {
+        include: {
+          queueEntry: {
+            include: {
+              match: {
+                include: {
+                  readyChecks: {
+                    where: { userId: session.user.id },
+                    select: { expiresAt: true, status: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const activeEntry = queueEntry ?? teamMembership?.team?.queueEntry ?? null;
+
+  if (!activeEntry) {
     return NextResponse.json({ status: "not_in_queue" });
   }
 
-  if (queueEntry.status === "MATCHED" && queueEntry.matchId) {
-    const readyCheck = queueEntry.match?.readyChecks?.[0];
+  if (activeEntry.status === "MATCHED" && activeEntry.matchId) {
+    const readyCheck = activeEntry.match?.readyChecks?.[0];
     return NextResponse.json({
       status: "matched",
-      matchId: queueEntry.matchId,
+      type: activeEntry.type,
+      teamId: activeEntry.teamId,
+      matchId: activeEntry.matchId,
       expiresAt: readyCheck?.expiresAt?.toISOString(),
       readyCheckStatus: readyCheck?.status,
     });
@@ -46,6 +71,8 @@ export async function GET() {
 
   return NextResponse.json({
     status: "waiting",
-    joinedAt: queueEntry.joinedAt.toISOString(),
+    type: activeEntry.type,
+    teamId: activeEntry.teamId,
+    joinedAt: activeEntry.joinedAt.toISOString(),
   });
 }

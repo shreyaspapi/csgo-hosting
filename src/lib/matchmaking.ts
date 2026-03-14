@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { QueueType, MatchStatus, MatchTeam } from "@prisma/client";
 import { COMPETITIVE_MAPS, DEFAULT_MATCH_MAP } from "@/lib/maps";
+import { TEAM_SIZE } from "@/lib/teams";
 
 const PLAYERS_PER_MATCH = 10;
 const READY_CHECK_TIMEOUT_SECONDS = 30;
@@ -12,6 +13,22 @@ interface QueuedPlayer {
   displayName: string;
   avatar: string;
   elo: number;
+}
+
+interface QueuedTeamMember {
+  id: string;
+  steamId: string;
+  displayName: string;
+  avatar: string;
+  elo: number;
+}
+
+interface QueuedTeam {
+  queueEntryId: string;
+  teamId: string;
+  name: string;
+  captainId: string;
+  members: QueuedTeamMember[];
 }
 
 /**
@@ -61,6 +78,55 @@ export async function checkSoloQueue(region: string): Promise<QueuedPlayer[] | n
     avatar: e.user!.avatar,
     elo: e.user!.elo,
   }));
+}
+
+export async function checkTeamQueue(region: string): Promise<[QueuedTeam, QueuedTeam] | null> {
+  const entries = await prisma.queueEntry.findMany({
+    where: {
+      type: QueueType.TEAM,
+      status: "WAITING",
+      region,
+      teamId: { not: null },
+    },
+    include: {
+      team: {
+        include: {
+          members: {
+            include: {
+              user: true,
+            },
+            orderBy: {
+              joinedAt: "asc",
+            },
+          },
+        },
+      },
+    },
+    orderBy: { joinedAt: "asc" },
+    take: 2,
+  });
+
+  if (entries.length < 2) return null;
+
+  const teams = entries
+    .filter((entry) => entry.team && entry.team.members.length === TEAM_SIZE)
+    .map((entry) => ({
+      queueEntryId: entry.id,
+      teamId: entry.team!.id,
+      name: entry.team!.name,
+      captainId: entry.team!.captainId,
+      members: entry.team!.members.map((member) => ({
+        id: member.user.id,
+        steamId: member.user.steamId,
+        displayName: member.user.displayName,
+        avatar: member.user.avatar,
+        elo: member.user.elo,
+      })),
+    }));
+
+  if (teams.length < 2) return null;
+
+  return [teams[0], teams[1]];
 }
 
 /**
@@ -138,6 +204,56 @@ export async function createMatch(
   await prisma.queueEntry.updateMany({
     where: {
       id: { in: players.map((p) => p.queueEntryId) },
+    },
+    data: {
+      status: "MATCHED",
+      matchId: match.id,
+    },
+  });
+
+  return match.id;
+}
+
+export async function createTeamMatch(
+  teamA: QueuedTeam,
+  teamB: QueuedTeam,
+  region: string
+): Promise<string> {
+  const expiresAt = new Date(Date.now() + READY_CHECK_TIMEOUT_SECONDS * 1000);
+  const allPlayers = [...teamA.members, ...teamB.members];
+
+  const match = await prisma.match.create({
+    data: {
+      status: MatchStatus.READY_CHECK,
+      region,
+      map: DEFAULT_MATCH_MAP,
+      players: {
+        create: [
+          ...teamA.members.map((player) => ({
+            userId: player.id,
+            team: MatchTeam.TEAM_A,
+            isCaptain: player.id === teamA.captainId,
+          })),
+          ...teamB.members.map((player) => ({
+            userId: player.id,
+            team: MatchTeam.TEAM_B,
+            isCaptain: player.id === teamB.captainId,
+          })),
+        ],
+      },
+      readyChecks: {
+        create: allPlayers.map((player) => ({
+          userId: player.id,
+          status: "PENDING",
+          expiresAt,
+        })),
+      },
+    },
+  });
+
+  await prisma.queueEntry.updateMany({
+    where: {
+      id: { in: [teamA.queueEntryId, teamB.queueEntryId] },
     },
     data: {
       status: "MATCHED",

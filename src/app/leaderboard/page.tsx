@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -120,7 +121,9 @@ export default function LeaderboardPage() {
                               <AvatarImage src={p.avatar} alt={p.displayName} />
                               <AvatarFallback>{p.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
                             </Avatar>
-                            <span className="font-medium">{p.displayName}</span>
+                            <Link href={`/players/${p.id}`} className="font-medium transition-colors hover:text-primary">
+                              {p.displayName}
+                            </Link>
                             {isMe && (
                               <Badge variant="outline" className="border-primary/30 text-primary text-[10px] px-1.5">
                                 You

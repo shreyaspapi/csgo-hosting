@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { isAdminSession } from "@/lib/admin";
 import prisma from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/");
+  const isAdmin = isAdminSession(session);
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) redirect("/");
@@ -96,13 +98,20 @@ export default async function DashboardPage() {
           </div>
 
           <div className="md:ml-auto">
-            <Button
-              size="lg"
-              className="shadow-lg shadow-primary/20"
-              render={<Link href="/queue" />}
-            >
-              {activeQueue ? "In Queue..." : "Find Match"}
-            </Button>
+            <div className="flex gap-3">
+              {isAdmin && (
+                <Button variant="outline" size="lg" render={<Link href="/admin" />}>
+                  Admin
+                </Button>
+              )}
+              <Button
+                size="lg"
+                className="shadow-lg shadow-primary/20"
+                render={<Link href="/queue" />}
+              >
+                {activeQueue ? "In Queue..." : "Find Match"}
+              </Button>
+            </div>
           </div>
         </div>
 
