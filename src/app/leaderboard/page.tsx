@@ -3,7 +3,6 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -48,7 +47,6 @@ export default function LeaderboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="mx-auto max-w-4xl px-4 py-12">
         <div className="mb-10 text-center">
           <h1 className="text-3xl font-bold">Leaderboard</h1>

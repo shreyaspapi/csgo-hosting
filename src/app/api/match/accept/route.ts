@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { acceptReadyCheck } from "@/lib/matchmaking";
-import { orchestrateMatch } from "@/lib/match-orchestrator";
 
 /**
  * POST /api/match/accept - Accept ready check
@@ -24,10 +23,8 @@ export async function POST(req: NextRequest) {
   try {
     const result = await acceptReadyCheck(matchId, session.user.id);
 
-    // If all players accepted, kick off server provisioning
-    if (result.allReady) {
-      await orchestrateMatch(matchId);
-    }
+    // allReady now moves match to DRAFT (captain pick phase), not CONFIGURING.
+    // orchestrateMatch is triggered later by the draft endpoint once picks are done.
 
     return NextResponse.json(result);
   } catch (error) {

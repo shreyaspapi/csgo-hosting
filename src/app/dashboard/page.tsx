@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { isAdminSession } from "@/lib/admin";
 import prisma from "@/lib/prisma";
-import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,7 +56,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="mx-auto max-w-5xl px-4 py-12">
 
         {/* Active match banner */}

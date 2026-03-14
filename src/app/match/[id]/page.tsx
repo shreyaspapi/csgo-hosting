@@ -2,9 +2,8 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMapName } from "@/lib/maps";
+import { calculateHltvRating } from "@/lib/matchmaking";
 import { cn } from "@/lib/utils";
 
 interface MatchPlayer {
@@ -21,6 +21,9 @@ interface MatchPlayer {
   kills: number;
   deaths: number;
   assists: number;
+  headshots: number;
+  damage: number;
+  flashAssists: number;
   eloChange: number;
   user: { id: string; steamId: string; displayName: string; avatar: string; elo: number };
 }
@@ -41,10 +44,17 @@ interface MatchData {
   players: MatchPlayer[];
   server: { ip: string; port: number; status: string } | null;
   readyChecks?: { userId: string; status: string }[];
+  // Captain draft fields
+  draftPick?: number;
+  draftTeamA?: string[];
+  draftTeamB?: string[];
 }
+
+const DRAFT_PICK_ORDER = [0, 1, 1, 0, 0, 1, 1, 0] as const; // 0=Team A, 1=Team B
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   READY_CHECK: { label: "Ready Check", cls: "border-yellow-500/30 bg-yellow-500/10 text-yellow-400" },
+  DRAFT: { label: "Captain Draft", cls: "border-orange-500/30 bg-orange-500/10 text-orange-400" },
   CONFIGURING: { label: "Setting Up Server", cls: "border-blue-500/30 bg-blue-500/10 text-blue-400" },
   WARMUP: { label: "Warmup", cls: "border-cyan-500/30 bg-cyan-500/10 text-cyan-400" },
   KNIFE: { label: "Knife Round", cls: "border-purple-500/30 bg-purple-500/10 text-purple-400" },
@@ -61,29 +71,55 @@ export default function MatchPage() {
   const [match, setMatch] = useState<MatchData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [countdown, setCountdown] = useState(60);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/match/${matchId}`);
-        if (res.ok) setMatch(await res.json());
-        else setError("Match not found");
-      } catch {
-        setError("Failed to load match");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-    const id = setInterval(load, 5000);
-    return () => clearInterval(id);
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/match/${matchId}`);
+      if (res.ok) setMatch(await res.json());
+      else setError("Match not found");
+    } catch {
+      setError("Failed to load match");
+    } finally {
+      setLoading(false);
+    }
   }, [matchId]);
+
+  // Poll: 2s during DRAFT, 5s otherwise
+  useEffect(() => {
+    load();
+    const interval = match?.status === "DRAFT" ? 2000 : 5000;
+    const id = setInterval(load, interval);
+    return () => clearInterval(id);
+  }, [load, match?.status]);
+
+  // 60-second countdown per pick (resets when draftPick changes)
+  useEffect(() => {
+    if (match?.status !== "DRAFT") return;
+    setCountdown(60);
+    const t = setInterval(() => setCountdown((c) => (c > 0 ? c - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [match?.draftPick, match?.status]);
+
+  const handleDraftPick = async (targetUserId: string) => {
+    if (picking) return;
+    setPicking(true);
+    try {
+      await fetch(`/api/match/${matchId}/draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId }),
+      });
+      await load();
+    } finally {
+      setPicking(false);
+    }
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="mx-auto max-w-5xl px-4 py-12">
           <Skeleton className="mx-auto mb-4 h-8 w-48" />
           <Skeleton className="mx-auto mb-10 h-4 w-64" />
@@ -100,7 +136,6 @@ export default function MatchPage() {
   if (error || !match) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="flex flex-col items-center justify-center gap-4 py-24">
           <p className="text-xl text-destructive">{error}</p>
           <Button variant="outline" onClick={() => router.push("/queue")}>
@@ -119,7 +154,6 @@ export default function MatchPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="mx-auto max-w-5xl px-4 py-10">
         <div className="mb-8 text-center">
           <Badge variant="outline" className={cn("mb-3 gap-1.5", info.cls)}>
@@ -170,6 +204,166 @@ export default function MatchPage() {
           </Card>
         )}
 
+        {match.status === "DRAFT" && (() => {
+          const draftTeamA = match.draftTeamA ?? [];
+          const draftTeamB = match.draftTeamB ?? [];
+          const draftPick = match.draftPick ?? 0;
+          const captainAId = draftTeamA[0];
+          const captainBId = draftTeamB[0];
+          const currentCaptainId =
+            DRAFT_PICK_ORDER[draftPick] === 0 ? captainAId : captainBId;
+          const isMyTurn = session?.user?.id === currentCaptainId;
+          const pickedIds = new Set([...draftTeamA, ...draftTeamB]);
+          const remaining = match.players.filter(
+            (p) => !pickedIds.has(p.user.id)
+          );
+          const getPlayer = (uid: string) =>
+            match.players.find((p) => p.user.id === uid);
+
+          const teamLabel =
+            DRAFT_PICK_ORDER[draftPick] === 0 ? "Team A" : "Team B";
+
+          return (
+            <div className="mb-8">
+              {/* Header */}
+              <div className="mb-4 text-center">
+                <p className="text-sm font-medium text-orange-400">
+                  {isMyTurn
+                    ? "Your turn to pick — choose a player below"
+                    : `${teamLabel} Captain is picking...`}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pick {draftPick + 1} of 8 &middot; {countdown}s remaining
+                </p>
+              </div>
+
+              {/* Three-column layout: Team A | Remaining | Team B */}
+              <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr]">
+                {/* Team A */}
+                <div>
+                  <p className="mb-2 text-sm font-bold text-primary">
+                    {match.teamAName ?? "Team A"}
+                  </p>
+                  <div className="space-y-2">
+                    {draftTeamA.map((uid) => {
+                      const p = getPlayer(uid);
+                      if (!p) return null;
+                      return (
+                        <div
+                          key={uid}
+                          className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-2"
+                        >
+                          <Avatar size="sm">
+                            <AvatarImage src={p.user.avatar} />
+                            <AvatarFallback>
+                              {p.user.displayName.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              {p.user.displayName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              ELO {p.user.elo}
+                            </p>
+                          </div>
+                          {uid === captainAId && (
+                            <Badge
+                              variant="outline"
+                              className="border-yellow-500/30 px-1.5 py-0 text-[10px] text-yellow-400"
+                            >
+                              C
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Remaining (unpicked) players */}
+                <div className="min-w-[180px]">
+                  <p className="mb-2 text-center text-sm font-bold text-muted-foreground">
+                    Available
+                  </p>
+                  <div className="space-y-2">
+                    {remaining.map((p) => (
+                      <button
+                        key={p.user.id}
+                        disabled={!isMyTurn || picking}
+                        onClick={() => handleDraftPick(p.user.id)}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-lg border p-2 text-left transition-colors",
+                          isMyTurn && !picking
+                            ? "cursor-pointer border-orange-500/40 bg-orange-500/5 hover:border-orange-500/70 hover:bg-orange-500/15"
+                            : "cursor-default border-border bg-card opacity-60"
+                        )}
+                      >
+                        <Avatar size="sm">
+                          <AvatarImage src={p.user.avatar} />
+                          <AvatarFallback>
+                            {p.user.displayName.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">
+                            {p.user.displayName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            ELO {p.user.elo}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Team B */}
+                <div>
+                  <p className="mb-2 text-sm font-bold text-blue-400">
+                    {match.teamBName ?? "Team B"}
+                  </p>
+                  <div className="space-y-2">
+                    {draftTeamB.map((uid) => {
+                      const p = getPlayer(uid);
+                      if (!p) return null;
+                      return (
+                        <div
+                          key={uid}
+                          className="flex items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-500/5 p-2"
+                        >
+                          <Avatar size="sm">
+                            <AvatarImage src={p.user.avatar} />
+                            <AvatarFallback>
+                              {p.user.displayName.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              {p.user.displayName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              ELO {p.user.elo}
+                            </p>
+                          </div>
+                          {uid === captainBId && (
+                            <Badge
+                              variant="outline"
+                              className="border-yellow-500/30 px-1.5 py-0 text-[10px] text-yellow-400"
+                            >
+                              C
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         <div className="grid items-start gap-6 md:grid-cols-[1fr_auto_1fr]">
           <div>
             <div className="mb-4 flex items-center justify-between">
@@ -183,6 +377,8 @@ export default function MatchPage() {
                   player={player}
                   isMe={session?.user?.id === player.user.id}
                   showStats={showStats}
+                  rounds={match.scoreTeamA + match.scoreTeamB || undefined}
+                  matchId={matchId}
                 />
               ))}
             </div>
@@ -209,6 +405,8 @@ export default function MatchPage() {
                   player={player}
                   isMe={session?.user?.id === player.user.id}
                   showStats={showStats}
+                  rounds={match.scoreTeamA + match.scoreTeamB || undefined}
+                  matchId={matchId}
                 />
               ))}
             </div>
@@ -225,70 +423,167 @@ export default function MatchPage() {
   );
 }
 
+const REPORT_REASONS = [
+  { value: "cheating", label: "Cheating" },
+  { value: "toxic", label: "Toxic" },
+  { value: "griefing", label: "Griefing" },
+  { value: "afk", label: "AFK" },
+] as const;
+
 function PlayerRow({
   player,
   isMe,
   showStats,
+  rounds,
+  matchId,
 }: {
   player: MatchPlayer;
   isMe: boolean;
   showStats: boolean;
+  rounds?: number;
+  matchId: string;
 }) {
+  const hsPercent = player.kills > 0 ? Math.round((player.headshots / player.kills) * 100) : 0;
+  const adr = rounds && rounds > 0 ? Math.round(player.damage / rounds) : player.damage;
+  const rating = calculateHltvRating(player.kills, player.deaths, player.assists, player.damage, rounds ?? 0);
+  const ratingColor =
+    rating >= 1.1 ? "text-green-400" : rating >= 0.8 ? "text-yellow-400" : "text-red-400";
+
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<string>("cheating");
+  const [reportState, setReportState] = useState<"idle" | "submitting" | "done">("idle");
+
+  const submitReport = async () => {
+    setReportState("submitting");
+    try {
+      await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reportedId: player.user.id, matchId, reason: reportReason }),
+      });
+      setReportState("done");
+      setReportOpen(false);
+    } catch {
+      setReportState("idle");
+    }
+  };
+
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-lg border bg-card p-3",
+        "flex flex-col gap-2 rounded-lg border bg-card p-3",
         isMe ? "border-primary/50 ring-1 ring-primary/20" : "border-border"
       )}
     >
-      <Avatar size="default">
-        <AvatarImage src={player.user.avatar} alt={player.user.displayName} />
-        <AvatarFallback>{player.user.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <Link href={`/players/${player.user.id}`} className="truncate text-sm font-medium transition-colors hover:text-primary">
-            {player.user.displayName}
-          </Link>
-          {player.isCaptain && (
-            <Badge variant="outline" className="border-yellow-500/30 px-1.5 py-0 text-[10px] text-yellow-400">
-              C
-            </Badge>
-          )}
-          {isMe && (
-            <Badge variant="outline" className="border-primary/30 px-1.5 py-0 text-[10px] text-primary">
-              You
-            </Badge>
-          )}
+      <div className="flex items-center gap-3">
+        <Avatar size="default">
+          <AvatarImage src={player.user.avatar} alt={player.user.displayName} />
+          <AvatarFallback>{player.user.displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <Link href={`/players/${player.user.id}`} className="truncate text-sm font-medium transition-colors hover:text-primary">
+              {player.user.displayName}
+            </Link>
+            {player.isCaptain && (
+              <Badge variant="outline" className="border-yellow-500/30 px-1.5 py-0 text-[10px] text-yellow-400">
+                C
+              </Badge>
+            )}
+            {isMe && (
+              <Badge variant="outline" className="border-primary/30 px-1.5 py-0 text-[10px] text-primary">
+                You
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">ELO {player.user.elo}</p>
         </div>
-        <p className="text-xs text-muted-foreground">ELO {player.user.elo}</p>
-      </div>
-      {showStats && (
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-center">
-            <span className="font-semibold">{player.kills}</span>
-            <span className="block text-[10px] text-muted-foreground">K</span>
-          </span>
-          <span className="text-center">
-            <span className="font-semibold">{player.deaths}</span>
-            <span className="block text-[10px] text-muted-foreground">D</span>
-          </span>
-          <span className="text-center">
-            <span className="font-semibold">{player.assists}</span>
-            <span className="block text-[10px] text-muted-foreground">A</span>
-          </span>
-          {player.eloChange !== 0 && (
-            <Badge
-              variant="outline"
+        {showStats && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-center">
+              <span className="font-semibold">{player.kills}</span>
+              <span className="block text-[10px] text-muted-foreground">K</span>
+            </span>
+            <span className="text-center">
+              <span className="font-semibold">{player.deaths}</span>
+              <span className="block text-[10px] text-muted-foreground">D</span>
+            </span>
+            <span className="text-center">
+              <span className="font-semibold">{player.assists}</span>
+              <span className="block text-[10px] text-muted-foreground">A</span>
+            </span>
+            <span className="hidden text-center sm:block">
+              <span className="font-semibold">{hsPercent}%</span>
+              <span className="block text-[10px] text-muted-foreground">HS%</span>
+            </span>
+            <span className="hidden text-center sm:block">
+              <span className="font-semibold">{adr}</span>
+              <span className="block text-[10px] text-muted-foreground">ADR</span>
+            </span>
+            {rounds && rounds > 0 && (
+              <span className="text-center">
+                <span className={cn("font-semibold tabular-nums", ratingColor)}>{rating.toFixed(2)}</span>
+                <span className="block text-[10px] text-muted-foreground">RTG</span>
+              </span>
+            )}
+            {player.eloChange !== 0 && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-xs",
+                  player.eloChange > 0 ? "border-green-500/30 text-green-400" : "border-destructive/30 text-destructive"
+                )}
+              >
+                {player.eloChange > 0 ? "+" : ""}
+                {player.eloChange}
+              </Badge>
+            )}
+          </div>
+        )}
+        {!isMe && (
+          reportState === "done" ? (
+            <span className="ml-1 shrink-0 text-[10px] font-medium text-muted-foreground">Reported</span>
+          ) : (
+            <button
+              title="Report player"
+              onClick={() => setReportOpen((v) => !v)}
               className={cn(
-                "text-xs",
-                player.eloChange > 0 ? "border-green-500/30 text-green-400" : "border-destructive/30 text-destructive"
+                "ml-1 shrink-0 text-base leading-none transition-colors",
+                reportOpen ? "text-destructive" : "text-muted-foreground hover:text-destructive"
               )}
             >
-              {player.eloChange > 0 ? "+" : ""}
-              {player.eloChange}
-            </Badge>
-          )}
+              ⚑
+            </button>
+          )
+        )}
+      </div>
+
+      {reportOpen && reportState !== "done" && (
+        <div className="flex items-center gap-2 border-t border-border pt-2">
+          <select
+            value={reportReason}
+            onChange={(e) => setReportReason(e.target.value)}
+            className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-destructive/50"
+          >
+            {REPORT_REASONS.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={reportState === "submitting"}
+            onClick={submitReport}
+            className="h-7 px-3 text-xs"
+          >
+            {reportState === "submitting" ? "..." : "Submit"}
+          </Button>
+          <button
+            onClick={() => setReportOpen(false)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>

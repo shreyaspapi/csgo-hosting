@@ -19,6 +19,19 @@ interface Get5PlayerDeathEvent extends Get5Event {
     attacker?: { steamid: string };
     victim?: { steamid: string };
     assist?: { steamid: string };
+    headshot?: boolean;
+    thru_smoke?: boolean;
+    no_scope?: boolean;
+  };
+}
+
+interface Get5PlayerHurtEvent extends Get5Event {
+  params: {
+    attacker?: { steamid: string };
+    victim?: { steamid: string };
+    dmg_health?: number;
+    dmg_armor?: number;
+    hitgroup?: string;
   };
 }
 
@@ -77,6 +90,10 @@ export async function POST(req: NextRequest) {
         await handlePlayerDeath(matchId, event);
         break;
 
+      case "player_hurt":
+        await handlePlayerHurt(matchId, event);
+        break;
+
       default:
         // Log unknown events for debugging
         console.log(`get5 event: ${eventType}`, event);
@@ -131,6 +148,12 @@ async function handlePlayerDeath(matchId: string, event: Get5PlayerDeathEvent) {
         where: { matchId, userId: attacker.id },
         data: { kills: { increment: 1 } },
       });
+      if (event.params?.headshot) {
+        await prisma.matchPlayer.updateMany({
+          where: { matchId, userId: attacker.id },
+          data: { headshots: { increment: 1 } },
+        });
+      }
     }
   }
 
@@ -156,6 +179,23 @@ async function handlePlayerDeath(matchId: string, event: Get5PlayerDeathEvent) {
       await prisma.matchPlayer.updateMany({
         where: { matchId, userId: assister.id },
         data: { assists: { increment: 1 } },
+      });
+    }
+  }
+}
+
+async function handlePlayerHurt(matchId: string, event: Get5PlayerHurtEvent) {
+  const attackerSteamId = event.params?.attacker?.steamid;
+  const dmgHealth = event.params?.dmg_health ?? 0;
+
+  if (attackerSteamId && dmgHealth > 0) {
+    const attacker = await prisma.user.findUnique({
+      where: { steamId: attackerSteamId },
+    });
+    if (attacker) {
+      await prisma.matchPlayer.updateMany({
+        where: { matchId, userId: attacker.id },
+        data: { damage: { increment: dmgHealth } },
       });
     }
   }

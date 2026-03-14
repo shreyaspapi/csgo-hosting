@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySteamOpenId, getSteamPlayer } from "@/lib/steam";
+import { verifySteamOpenId, getSteamPlayer, getSteamBanStatus } from "@/lib/steam";
 import prisma from "@/lib/prisma";
 import { encode } from "next-auth/jwt";
 
@@ -51,6 +51,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${baseUrl}/?error=steam_profile_failed`);
   }
 
+  // Check VAC ban status
+  let banStatus = null;
+  try {
+    banStatus = await getSteamBanStatus(steamId);
+  } catch (err) {
+    console.warn("[steam/callback] ban check failed (non-fatal):", err);
+  }
+
+  // Block users with a VAC ban within the last 2 years
+  if (banStatus?.vacBanned && banStatus.daysSinceLastBan < 730) {
+    console.warn("[steam/callback] blocked VAC-banned user:", steamId);
+    return NextResponse.redirect(`${baseUrl}/?error=vac_banned`);
+  }
+
   // Upsert user in database
   let user;
   try {
@@ -61,6 +75,7 @@ export async function GET(req: NextRequest) {
         avatar: steamPlayer.avatarmedium,
         avatarFull: steamPlayer.avatarfull,
         profileUrl: steamPlayer.profileurl,
+        vacBanned: banStatus?.vacBanned ?? false,
       },
       create: {
         steamId,
@@ -68,6 +83,7 @@ export async function GET(req: NextRequest) {
         avatar: steamPlayer.avatarmedium,
         avatarFull: steamPlayer.avatarfull,
         profileUrl: steamPlayer.profileurl,
+        vacBanned: banStatus?.vacBanned ?? false,
       },
     });
   } catch (err) {

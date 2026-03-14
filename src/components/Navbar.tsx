@@ -28,6 +28,7 @@ export default function Navbar() {
   const navItems = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Find Match", href: "/queue" },
+    { label: "Matches", href: "/matches" },
     { label: "Leaderboard", href: "/leaderboard" },
     { label: "Teams", href: "/teams" },
   ];

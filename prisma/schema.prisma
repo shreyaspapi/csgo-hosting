@@ -21,16 +21,19 @@ model User {
   draws       Int      @default(0)
   isBanned    Boolean  @default(false)
   banReason   String?
+  vacBanned   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  queueEntry    QueueEntry?
-  matchPlayers  MatchPlayer[]
-  captainOf     Team[]        @relation("TeamCaptain")
-  teamMembers   TeamMember[]
-  readyChecks   ReadyCheck[]
-  mapVotes      MapVote[]
+  queueEntry      QueueEntry?
+  matchPlayers    MatchPlayer[]
+  captainOf       Team[]        @relation("TeamCaptain")
+  teamMembers     TeamMember[]
+  readyChecks     ReadyCheck[]
+  mapVotes        MapVote[]
+  reportsFiled    Report[]      @relation("ReportFiled")
+  reportsReceived Report[]      @relation("ReportReceived")
 
   @@index([elo])
   @@index([steamId])
@@ -121,6 +124,7 @@ model ReadyCheck {
 // ─── Matches ────────────────────────────────────────────────────────
 enum MatchStatus {
   READY_CHECK    // Waiting for all players to accept
+  DRAFT          // Captain draft in progress
   CONFIGURING    // Setting up the server
   WARMUP         // Server ready, players joining
   KNIFE          // Knife round
@@ -141,6 +145,11 @@ model Match {
   serverPort    Int?
   connectString String?     // steam://connect/ip:port/password
   gotv          String?     // GOTV connect string
+
+  // Captain draft state
+  draftPick     Int         @default(0)   // which pick number we're on (0-7)
+  draftTeamA    String      @default("[]") // JSON array of picked userId strings
+  draftTeamB    String      @default("[]") // JSON array of picked userId strings
 
   // Scores
   scoreTeamA    Int         @default(0)
@@ -175,12 +184,15 @@ model MatchPlayer {
   isCaptain Boolean  @default(false)
 
   // Stats (updated after match)
-  kills    Int       @default(0)
-  deaths   Int       @default(0)
-  assists  Int       @default(0)
-  mvps     Int       @default(0)
-  score    Int       @default(0)
-  eloChange Int      @default(0)
+  kills        Int       @default(0)
+  deaths       Int       @default(0)
+  assists      Int       @default(0)
+  mvps         Int       @default(0)
+  score        Int       @default(0)
+  eloChange    Int       @default(0)
+  headshots    Int       @default(0)   // headshot kills
+  damage       Int       @default(0)   // total damage dealt (for ADR)
+  flashAssists Int       @default(0)   // flash assists
 
   match    Match     @relation(fields: [matchId], references: [id])
   user     User      @relation(fields: [userId], references: [id])
@@ -203,6 +215,24 @@ model MapVote {
   @@unique([matchId, userId])
   @@index([matchId, map])
   @@index([userId])
+}
+
+// ─── Reports ────────────────────────────────────────────────────────
+model Report {
+  id          String   @id @default(cuid())
+  reporterId  String
+  reportedId  String
+  matchId     String?
+  reason      String   // "cheating" | "toxic" | "griefing" | "afk"
+  description String?
+  status      String   @default("pending") // "pending" | "reviewed" | "dismissed"
+  createdAt   DateTime @default(now())
+
+  reporter User @relation("ReportFiled", fields: [reporterId], references: [id])
+  reported User @relation("ReportReceived", fields: [reportedId], references: [id])
+
+  @@index([reportedId])
+  @@index([reporterId])
 }
 
 // ─── Game Servers ───────────────────────────────────────────────────

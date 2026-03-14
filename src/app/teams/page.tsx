@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -170,7 +169,6 @@ export default function TeamsPage() {
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="flex h-64 items-center justify-center text-muted-foreground">Loading team...</div>
       </div>
     );
@@ -178,7 +176,6 @@ export default function TeamsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="mx-auto max-w-4xl px-4 py-12">
         <div className="mb-10 text-center">
           <h1 className="text-3xl font-bold">Teams</h1>

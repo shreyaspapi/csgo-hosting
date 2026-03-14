@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import Navbar from "@/components/Navbar";
 import { cn } from "@/lib/utils";
 
 const geistSans = localFont({
@@ -31,6 +32,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={cn(geistSans.variable, geistMono.variable, "valve-shell min-h-screen antialiased")}>
         <Providers>
+          <Navbar />
           <div className="min-h-screen lg:pl-[19rem]">{children}</div>
         </Providers>
       </body>

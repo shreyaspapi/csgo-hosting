@@ -58,6 +58,34 @@ export function buildSteamOpenIdUrl(returnUrl: string): string {
   return `https://steamcommunity.com/openid/login?${params.toString()}`;
 }
 
+export interface SteamBanStatus {
+  steamId: string;
+  communityBanned: boolean;
+  vacBanned: boolean;
+  numberOfVacBans: number;
+  daysSinceLastBan: number;
+  numberOfGameBans: number;
+}
+
+export async function getSteamBanStatus(steamId: string): Promise<SteamBanStatus | null> {
+  const apiKey = process.env.STEAM_API_KEY;
+  if (!apiKey) return null;
+  const url = `https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key=${apiKey}&steamids=${steamId}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const player = data?.players?.[0];
+  if (!player) return null;
+  return {
+    steamId,
+    communityBanned: player.CommunityBanned,
+    vacBanned: player.VACBanned,
+    numberOfVacBans: player.NumberOfVACBans,
+    daysSinceLastBan: player.DaysSinceLastBan,
+    numberOfGameBans: player.NumberOfGameBans,
+  };
+}
+
 /**
  * Verify Steam OpenID response
  * Sends verification request back to Steam to confirm authenticity

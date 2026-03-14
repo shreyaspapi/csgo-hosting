@@ -32,6 +32,25 @@ interface QueuedTeam {
 }
 
 /**
+ * HLTV 2.0 rating approximation
+ */
+export function calculateHltvRating(
+  kills: number,
+  deaths: number,
+  assists: number,
+  damage: number,
+  rounds: number
+): number {
+  if (rounds === 0) return 0;
+  const kpr = kills / rounds;
+  const survivalRate = 1 - deaths / rounds;
+  const rdm = damage / rounds / 100;
+  const rating =
+    kpr * 0.32 + survivalRate * 0.2 + rdm * 0.25 + (assists / rounds) * 0.15 + 0.8;
+  return Math.round(rating * 100) / 100;
+}
+
+/**
  * ELO calculation helper
  */
 export function calculateEloChange(
@@ -293,12 +312,26 @@ export async function acceptReadyCheck(
   if (allReady) {
     const selectedMap = await finalizeMatchMap(matchId);
 
-    // Move match to CONFIGURING state
+    // Fetch all match players sorted by ELO descending to assign captains
+    const matchPlayers = await prisma.matchPlayer.findMany({
+      where: { matchId },
+      include: { user: { select: { id: true, elo: true } } },
+    });
+    const sortedByElo = [...matchPlayers].sort(
+      (a, b) => b.user.elo - a.user.elo
+    );
+    const captainA = sortedByElo[0];
+    const captainB = sortedByElo[1];
+
+    // Move match to DRAFT state; captains seed their own arrays
     await prisma.match.update({
       where: { id: matchId },
       data: {
-        status: MatchStatus.CONFIGURING,
+        status: MatchStatus.DRAFT,
         map: selectedMap,
+        draftPick: 0,
+        draftTeamA: JSON.stringify([captainA.user.id]),
+        draftTeamB: JSON.stringify([captainB.user.id]),
       },
     });
 

@@ -83,11 +83,17 @@ export async function GET(
       : match.map;
   const { teamAName, teamBName } = getMatchTeamNames(match.queueEntries);
 
+  // Parse draft JSON arrays so the client receives typed arrays
+  const draftTeamA: string[] = JSON.parse(match.draftTeamA ?? "[]");
+  const draftTeamB: string[] = JSON.parse(match.draftTeamB ?? "[]");
+
   return NextResponse.json({
     ...match,
     selectedMap,
     teamAName,
     teamBName,
     voteCounts,
+    draftTeamA,
+    draftTeamB,
   });
 }

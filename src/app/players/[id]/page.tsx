@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { calculateHltvRating } from "@/lib/matchmaking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -55,6 +56,41 @@ export default async function PlayerProfilePage({
   const winRate =
     user.wins + user.losses > 0
       ? Math.round((user.wins / (user.wins + user.losses)) * 100)
+      : 0;
+
+  // Career stats computed from recent matches
+  const finishedMatches = recentMatches.filter((mp) => mp.match.status === "FINISHED");
+  const totalMatches = finishedMatches.length;
+  const totalKills = finishedMatches.reduce((s, mp) => s + mp.kills, 0);
+  const totalDeaths = finishedMatches.reduce((s, mp) => s + mp.deaths, 0);
+  const avgKd = totalDeaths > 0 ? Math.round((totalKills / totalDeaths) * 100) / 100 : totalKills;
+  const avgHs =
+    totalMatches > 0
+      ? Math.round(
+          finishedMatches.reduce((s, mp) => s + (mp.kills > 0 ? mp.headshots / mp.kills : 0), 0) /
+            totalMatches *
+            100
+        )
+      : 0;
+  const avgAdr =
+    totalMatches > 0
+      ? Math.round(
+          finishedMatches.reduce((mp_sum, mp) => {
+            const rounds = mp.match.scoreTeamA + mp.match.scoreTeamB;
+            return mp_sum + (rounds > 0 ? mp.damage / rounds : 0);
+          }, 0) / totalMatches
+        )
+      : 0;
+  const avgRating =
+    totalMatches > 0
+      ? Math.round(
+          finishedMatches.reduce((s, mp) => {
+            const rounds = mp.match.scoreTeamA + mp.match.scoreTeamB;
+            return s + calculateHltvRating(mp.kills, mp.deaths, mp.assists, mp.damage, rounds);
+          }, 0) /
+            totalMatches *
+            100
+        ) / 100
       : 0;
 
   return (
@@ -145,6 +181,30 @@ export default async function PlayerProfilePage({
                  </div>
               </div>
 
+              {totalMatches > 0 && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Career Stats</label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {[
+                      { l: "Matches", v: totalMatches, c: "text-primary" },
+                      { l: "Avg K/D", v: avgKd.toFixed(2), c: avgKd >= 1 ? "text-green-500" : "text-red-500" },
+                      { l: "Avg HS%", v: `${avgHs}%`, c: "text-yellow-400" },
+                      { l: "Avg ADR", v: avgAdr, c: "text-cyan-400" },
+                      {
+                        l: "Avg RTG",
+                        v: avgRating.toFixed(2),
+                        c: avgRating >= 1.1 ? "text-green-500" : avgRating >= 0.8 ? "text-yellow-500" : "text-red-500",
+                      },
+                    ].map(s => (
+                      <div key={s.l} className="bg-[#1a1a1a] border border-[#333] p-2 text-center">
+                        <div className={cn("text-base font-black font-mono", s.c)}>{s.v}</div>
+                        <div className="text-[9px] uppercase font-bold text-muted-foreground">{s.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3">
                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Mission History</label>
                  <div className="border border-[#444] bg-[#1a1a1a] max-h-48 overflow-y-auto font-mono text-[10px]">
@@ -154,6 +214,9 @@ export default async function PlayerProfilePage({
                           <TableHead>DATE</TableHead>
                           <TableHead>MAP</TableHead>
                           <TableHead>RESULT</TableHead>
+                          <TableHead>K/D/A</TableHead>
+                          <TableHead>HS%</TableHead>
+                          <TableHead>ADR</TableHead>
                           <TableHead className="text-right">ELO</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -163,6 +226,9 @@ export default async function PlayerProfilePage({
                                       (mp.team === "TEAM_B" && mp.match.scoreTeamB > mp.match.scoreTeamA);
                           const lost = (mp.team === "TEAM_A" && mp.match.scoreTeamA < mp.match.scoreTeamB) ||
                                        (mp.team === "TEAM_B" && mp.match.scoreTeamB < mp.match.scoreTeamA);
+                          const rounds = mp.match.scoreTeamA + mp.match.scoreTeamB;
+                          const hsP = mp.kills > 0 ? Math.round((mp.headshots / mp.kills) * 100) : 0;
+                          const adr = rounds > 0 ? Math.round(mp.damage / rounds) : 0;
                           return (
                             <TableRow key={mp.id}>
                               <TableCell className="text-muted-foreground">{new Date(mp.match.createdAt).toLocaleDateString()}</TableCell>
@@ -170,6 +236,9 @@ export default async function PlayerProfilePage({
                               <TableCell className={cn("font-black", won ? "text-green-500" : lost ? "text-red-500" : "text-yellow-500")}>
                                 {won ? "SUCCESS" : lost ? "FAILED" : "DRAW"}
                               </TableCell>
+                              <TableCell>{mp.kills}/{mp.deaths}/{mp.assists}</TableCell>
+                              <TableCell className="text-yellow-400">{hsP}%</TableCell>
+                              <TableCell className="text-cyan-400">{adr}</TableCell>
                               <TableCell className={cn("text-right font-bold", mp.eloChange > 0 ? "text-green-500" : "text-red-500")}>
                                 {mp.eloChange > 0 ? "+" : ""}{mp.eloChange}
                               </TableCell>
