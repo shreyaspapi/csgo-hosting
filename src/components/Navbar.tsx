@@ -22,8 +22,12 @@ const SteamIcon = () => (
 );
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
+
+  // Don't render the sidebar at all on the landing page for unauthenticated users.
+  // The landing page handles its own full-canvas layout.
+  if (pathname === "/" && !session && status !== "loading") return null;
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard" },
