@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { MatchStatus } from "@prisma/client";
+import { MatchStatus, Prisma } from "@prisma/client";
 import { calculateEloChange } from "@/lib/matchmaking";
 import { deallocateServer } from "@/lib/azure-server";
+
+interface Get5Event {
+  matchid: string;
+  event: string;
+  params?: Record<string, unknown>;
+}
+
+interface Get5RoundEndEvent extends Get5Event {
+  params: { team1_score: number; team2_score: number };
+}
+
+interface Get5PlayerDeathEvent extends Get5Event {
+  params: {
+    attacker?: { steamid: string };
+    victim?: { steamid: string };
+    assist?: { steamid: string };
+  };
+}
 
 /**
  * POST /api/get5/webhook
@@ -23,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     // Verify authorization
     const authHeader = req.headers.get("authorization");
-    const expectedToken = `Bearer ${process.env.NEXTAUTH_SECRET}`;
+    const expectedToken = `Bearer ${process.env.GET5_WEBHOOK_SECRET}`;
     if (authHeader !== expectedToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -84,7 +102,7 @@ async function handleGoingLive(matchId: string) {
   });
 }
 
-async function handleRoundEnd(matchId: string, event: any) {
+async function handleRoundEnd(matchId: string, event: Get5RoundEndEvent) {
   // Update scores
   const team1Score = event.params?.team1_score ?? 0;
   const team2Score = event.params?.team2_score ?? 0;
@@ -98,7 +116,7 @@ async function handleRoundEnd(matchId: string, event: any) {
   });
 }
 
-async function handlePlayerDeath(matchId: string, event: any) {
+async function handlePlayerDeath(matchId: string, event: Get5PlayerDeathEvent) {
   const attackerSteamId = event.params?.attacker?.steamid;
   const victimSteamId = event.params?.victim?.steamid;
   const assisterSteamId = event.params?.assist?.steamid;
@@ -143,7 +161,7 @@ async function handlePlayerDeath(matchId: string, event: any) {
   }
 }
 
-async function handleMapResult(matchId: string, event: any) {
+async function handleMapResult(matchId: string, event: Get5RoundEndEvent) {
   const team1Score = event.params?.team1_score ?? 0;
   const team2Score = event.params?.team2_score ?? 0;
 
@@ -156,7 +174,7 @@ async function handleMapResult(matchId: string, event: any) {
   });
 }
 
-async function handleSeriesEnd(matchId: string, _event: any) {
+async function handleSeriesEnd(matchId: string, _event: Get5Event) {
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {
@@ -214,7 +232,7 @@ async function handleSeriesEnd(matchId: string, _event: any) {
     });
 
     // Update user ELO and W/L record
-    const updateData: any = {
+    const updateData: Prisma.UserUpdateInput = {
       elo: { increment: eloChange },
     };
 
@@ -246,11 +264,8 @@ async function handleSeriesEnd(matchId: string, _event: any) {
     where: { matchId },
   });
 
-  // Deallocate the server
+  // Deallocate the server (fire and forget — don't block the response)
   if (match.serverId) {
-    // Wait a bit before deallocating so players can see results
-    setTimeout(() => {
-      deallocateServer(match.serverId!).catch(console.error);
-    }, 60000); // 1 minute delay
+    deallocateServer(match.serverId).catch(console.error);
   }
 }

@@ -165,29 +165,59 @@ export async function POST(req: NextRequest) {
       matchId = await createTeamMatch(teams[0], teams[1], region);
     }
   } else {
-    // Remove any stale queue entry first (handles DB unique constraint on userId)
-    await prisma.queueEntry.deleteMany({
-      where: {
-        userId: session.user.id,
-        status: { in: ["WAITING", "MATCHED"] },
-      },
+    // Wrap solo queue join in a transaction to prevent race conditions
+    const result = await prisma.$transaction(async (tx) => {
+      // Remove any stale queue entry first (handles DB unique constraint on userId)
+      await tx.queueEntry.deleteMany({
+        where: {
+          userId: session.user.id,
+          status: { in: ["WAITING", "MATCHED"] },
+        },
+      });
+
+      // Check for active match inside transaction
+      const activeMatchInTx = await tx.matchPlayer.findFirst({
+        where: {
+          userId: session.user.id,
+          match: {
+            status: {
+              in: ["READY_CHECK", "CONFIGURING", "WARMUP", "KNIFE", "LIVE"],
+            },
+          },
+        },
+      });
+
+      if (activeMatchInTx) {
+        return { error: "Already in an active match" as const };
+      }
+
+      const entry = await tx.queueEntry.create({
+        data: {
+          userId: session.user.id,
+          type: QueueType.SOLO,
+          region,
+          status: "WAITING",
+        },
+      });
+
+      const players = await checkSoloQueue(region);
+      let txMatchId: string | null = null;
+      if (players) {
+        txMatchId = await createMatch(players, region);
+      }
+
+      return { entryId: entry.id, matchId: txMatchId };
     });
 
-    const entry = await prisma.queueEntry.create({
-      data: {
-        userId: session.user.id,
-        type: QueueType.SOLO,
-        region,
-        status: "WAITING",
-      },
-    });
-
-    entryId = entry.id;
-
-    const players = await checkSoloQueue(region);
-    if (players) {
-      matchId = await createMatch(players, region);
+    if ("error" in result) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: 400 }
+      );
     }
+
+    entryId = result.entryId;
+    matchId = result.matchId;
   }
 
   const stats = await getQueueStats(region);

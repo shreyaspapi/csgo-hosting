@@ -5,35 +5,33 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: rgba(30, 30, 30, 0.85);
-  --foreground: #e1e1e1;
-  --card: rgba(45, 45, 45, 0.9);
-  --card-foreground: #e1e1e1;
-  --popover: rgba(35, 35, 35, 0.95);
-  --popover-foreground: #e1e1e1;
-  --primary: #FF9D00;
-  --primary-foreground: #000000;
-  --secondary: #4a4a4a;
-  --secondary-foreground: #e1e1e1;
-  --muted: #3a3a3a;
-  --muted-foreground: #888888;
-  --accent: #FF9D00;
-  --accent-foreground: #000000;
-  --destructive: #af3e3e;
-  --border: #444444;
-  --input: rgba(20, 20, 20, 0.5);
-  --ring: #FF9D00;
-  --radius: 0px;
-  
-  --valve-orange: #FF9D00;
-  --terminal-green: #4CAF50;
-  --vgui-grey: #4c4c4c;
+  --background: #0f1113;
+  --foreground: #d6d4cb;
+  --card: rgba(69, 72, 67, 0.84);
+  --card-foreground: #ece7d8;
+  --popover: rgba(73, 76, 71, 0.94);
+  --popover-foreground: #ece7d8;
+  --primary: #d3a23b;
+  --primary-foreground: #16120c;
+  --secondary: #60635d;
+  --secondary-foreground: #f1ead7;
+  --muted: rgba(94, 97, 92, 0.55);
+  --muted-foreground: #a9ada4;
+  --accent: #b5b08f;
+  --accent-foreground: #171612;
+  --destructive: #b35f4f;
+  --border: rgba(199, 194, 173, 0.18);
+  --input: rgba(12, 13, 14, 0.58);
+  --ring: #d3a23b;
+  --radius: 2px;
+  --menu-panel: rgba(27, 29, 31, 0.78);
+  --scanline: rgba(255, 255, 255, 0.028);
 }
 
 @theme inline {
   --font-sans: "Tahoma", "Verdana", "Segoe UI", sans-serif;
   --font-mono: "Courier New", "Lucida Console", monospace;
-  
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -52,74 +50,123 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
+
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    border-radius: 0 !important;
-  }
-  
-  body {
-    @apply bg-transparent text-foreground font-sans;
-    background-image: 
-      linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)),
-      url('https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
   }
 
-  /* Scanline Overlay */
+  html {
+    background: #0f1113;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground;
+    background-image:
+      linear-gradient(90deg, rgba(10, 10, 10, 0.78), rgba(10, 10, 10, 0.18)),
+      url("/valve-bald-guy.png"),
+      radial-gradient(circle at 15% 20%, rgba(163, 171, 144, 0.22), transparent 24%),
+      radial-gradient(circle at 78% 14%, rgba(210, 162, 59, 0.1), transparent 20%),
+      linear-gradient(120deg, rgba(8, 9, 10, 0.76), rgba(17, 19, 21, 0.92)),
+      url("https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2070&auto=format&fit=crop");
+    background-size: 42rem auto, 42rem auto, cover, cover, cover, cover;
+    background-position: right -4rem bottom 0, right -4rem bottom 0, center top, center top, center top, center top;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+    background-blend-mode: screen, normal, normal, normal, normal, normal;
+    background-attachment: fixed;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+  }
+
   body::before {
-    content: " ";
-    display: block;
+    content: "";
     position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
-                linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
-    z-index: 9999;
-    background-size: 100% 2px, 3px 100%;
+    inset: 0;
+    background:
+      linear-gradient(to bottom, transparent, var(--scanline) 50%, transparent 51%),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.01), transparent 35%, rgba(255, 255, 255, 0.01));
+    background-size: 100% 3px, 100% 100%;
     pointer-events: none;
-    opacity: 0.3;
+    opacity: 0.42;
+    z-index: 1;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at center, transparent 52%, rgba(0, 0, 0, 0.55) 100%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.28));
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  a,
+  button {
+    cursor: default;
+  }
+
+  ::selection {
+    background: rgba(211, 162, 59, 0.26);
+    color: #fff7de;
   }
 }
 
 @layer components {
   .vgui-panel {
-    @apply bg-background border border-border shadow-lg;
-    box-shadow: inset 1px 1px 0px rgba(255,255,255,0.05), 2px 2px 5px rgba(0,0,0,0.5);
+    @apply border text-card-foreground;
+    background:
+      linear-gradient(180deg, rgba(110, 114, 106, 0.88), rgba(69, 72, 67, 0.92)),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
+    border-color: rgba(229, 223, 198, 0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.45),
+      0 18px 40px rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(10px);
   }
 
   .vgui-button {
-    @apply uppercase font-bold tracking-tight transition-all;
-    border: 1px solid #555;
-    background: linear-gradient(to bottom, #4c4c4c 0%, #3a3a3a 100%);
-    box-shadow: inset 1px 1px 0px rgba(255,255,255,0.1);
+    @apply uppercase font-bold tracking-[0.14em] transition-all;
+    border: 1px solid rgba(226, 220, 194, 0.18);
+    background: linear-gradient(180deg, rgba(105, 108, 102, 0.92), rgba(65, 67, 63, 0.96));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.11),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.45);
   }
 
   .vgui-button:hover {
-    @apply text-primary border-primary;
-    background: linear-gradient(to bottom, #5a5a5a 0%, #444444 100%);
+    color: #f3d18a;
+    border-color: rgba(211, 162, 59, 0.46);
+    background: linear-gradient(180deg, rgba(119, 122, 115, 0.94), rgba(76, 79, 74, 0.98));
   }
 
   .vgui-button:active {
-    background: #2a2a2a;
-    box-shadow: inset 2px 2px 4px rgba(0,0,0,0.5);
+    transform: translateY(1px);
+    background: linear-gradient(180deg, rgba(56, 58, 54, 0.96), rgba(76, 79, 74, 0.94));
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.48);
   }
 
   .vgui-input {
-    @apply bg-input border border-border text-foreground font-mono px-2 py-1;
-    box-shadow: inset 2px 2px 4px rgba(0,0,0,0.5);
+    @apply border px-2 py-1 font-mono text-foreground;
+    background: linear-gradient(180deg, rgba(15, 17, 18, 0.86), rgba(24, 26, 28, 0.7));
+    border-color: rgba(229, 223, 198, 0.12);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.55);
+  }
+
+  .menu-title {
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+  }
+
+  .menu-divider {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(219, 214, 196, 0.7), transparent);
   }
 }
-

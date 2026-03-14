@@ -1,7 +1,4 @@
 import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import prisma from "@/lib/prisma";
-import { getSteamPlayer, verifySteamOpenId } from "@/lib/steam";
 
 declare module "next-auth" {
   interface Session {
@@ -32,58 +29,14 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      id: "steam",
-      name: "Steam",
-      credentials: {},
-      async authorize(credentials, req) {
-        // The query params from Steam's OpenID redirect
-        const query = (req as any)?.query ?? {};
-
-        // Verify the OpenID response with Steam
-        const steamId = await verifySteamOpenId(query);
-        if (!steamId) return null;
-
-        // Fetch Steam profile
-        const steamPlayer = await getSteamPlayer(steamId);
-        if (!steamPlayer) return null;
-
-        // Upsert user in database
-        const user = await prisma.user.upsert({
-          where: { steamId },
-          update: {
-            displayName: steamPlayer.personaname,
-            avatar: steamPlayer.avatarmedium,
-            avatarFull: steamPlayer.avatarfull,
-            profileUrl: steamPlayer.profileurl,
-          },
-          create: {
-            steamId,
-            displayName: steamPlayer.personaname,
-            avatar: steamPlayer.avatarmedium,
-            avatarFull: steamPlayer.avatarfull,
-            profileUrl: steamPlayer.profileurl,
-          },
-        });
-
-        return {
-          id: user.id,
-          steamId: user.steamId,
-          name: user.displayName,
-          image: user.avatar,
-          elo: user.elo,
-        };
-      },
-    }),
-  ],
+  providers: [],
 
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.steamId = (user as any).steamId;
-        token.elo = (user as any).elo;
+        token.steamId = (user as { steamId: string; elo: number }).steamId;
+        token.elo = (user as { steamId: string; elo: number }).elo;
       }
       return token;
     },

@@ -26,10 +26,7 @@ export async function POST(req: NextRequest) {
 
     // If all players accepted, kick off server provisioning
     if (result.allReady) {
-      // Don't await - let this run in the background
-      orchestrateMatch(matchId).catch((err) => {
-        console.error("Match orchestration failed:", err);
-      });
+      await orchestrateMatch(matchId);
     }
 
     return NextResponse.json(result);

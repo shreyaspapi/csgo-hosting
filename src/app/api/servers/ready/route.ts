@@ -10,6 +10,13 @@ import { getMatchTeamNames } from "@/lib/match-teams";
  */
 export async function POST(req: NextRequest) {
   try {
+    // Verify authorization
+    const authHeader = req.headers.get("authorization");
+    const expectedToken = `Bearer ${process.env.GET5_WEBHOOK_SECRET}`;
+    if (!process.env.GET5_WEBHOOK_SECRET || authHeader !== expectedToken) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { matchId, rconPassword } = await req.json();
 
     if (!matchId) {

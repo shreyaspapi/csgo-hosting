@@ -77,41 +77,8 @@ export async function configureMatchServer(
   const {
     matchId,
     map,
-    teamAName,
-    teamBName,
-    teamASteamIds,
-    teamBSteamIds,
     webhookUrl,
   } = matchConfig;
-
-  // Build get5 match config JSON (used by get5_loadmatch_url endpoint)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const get5Config = {
-    matchid: matchId,
-    num_maps: 1,
-    maplist: [map],
-    skip_veto: true,
-    side_type: "knife",
-    players_per_team: 5,
-    min_players_to_ready: 1,
-    team1: {
-      name: teamAName,
-      players: Object.fromEntries(
-        teamASteamIds.map((id) => [id, ""])
-      ),
-    },
-    team2: {
-      name: teamBName,
-      players: Object.fromEntries(
-        teamBSteamIds.map((id) => [id, ""])
-      ),
-    },
-    cvars: {
-      get5_remote_log_url: webhookUrl,
-      get5_remote_log_header_key: "Authorization",
-      get5_remote_log_header_value: `Bearer ${process.env.NEXTAUTH_SECRET}`,
-    },
-  };
 
   const commands = [
     // Set server password for the match

@@ -4,12 +4,10 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
-// import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-// import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { COMPETITIVE_MAPS, formatMapName } from "@/lib/maps";
@@ -269,7 +267,30 @@ export default function QueuePage() {
   };
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
-  const readyRemaining = Math.max(0, Math.ceil((readyExpiry - Date.now()) / 1000));
+  const [readyRemaining, setReadyRemaining] = useState(0);
+
+  // Tick readyRemaining every second while in matched/accepted state
+  useEffect(() => {
+    if (!readyExpiry || !["matched", "accepted"].includes(queueState)) return;
+    const tick = () => setReadyRemaining(Math.max(0, Math.ceil((readyExpiry - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [readyExpiry, queueState]);
+
+  // Auto-decline when ready check timer expires
+  const hasAutoDeclinedRef = useRef(false);
+  useEffect(() => {
+    if (queueState === "matched" && readyRemaining <= 0 && readyExpiry > 0 && !hasAutoDeclinedRef.current) {
+      hasAutoDeclinedRef.current = true;
+      addLog("Ready check EXPIRED — auto-declining...");
+      declineMatch();
+    }
+    if (queueState !== "matched") {
+      hasAutoDeclinedRef.current = false;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queueState, readyRemaining, readyExpiry]);
   const isCaptain = team?.captainId === session?.user?.id;
   const teamReady = (team?.members.length ?? 0) === 5;
   const teamCanQueue = Boolean(team && isCaptain && teamReady);
@@ -292,7 +313,7 @@ export default function QueuePage() {
           {["INTERNET", "TEAM", "MAPS"].map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab as "INTERNET" | "TEAM" | "MAPS")}
               className={cn(
                 "px-4 py-1.5 text-[11px] font-bold uppercase tracking-tight transition-all",
                 "border-t border-l border-r",

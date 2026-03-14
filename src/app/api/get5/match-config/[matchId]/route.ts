@@ -11,6 +11,13 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ matchId: string }> }
 ) {
+  // Verify authorization
+  const authHeader = req.headers.get("authorization");
+  const expectedToken = `Bearer ${process.env.GET5_WEBHOOK_SECRET}`;
+  if (!process.env.GET5_WEBHOOK_SECRET || authHeader !== expectedToken) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { matchId } = await params;
   const match = await prisma.match.findUnique({
     where: { id: matchId },
@@ -75,7 +82,7 @@ export async function GET(
     cvars: {
       get5_remote_log_url: `${appUrl}/api/get5/webhook`,
       get5_remote_log_header_key: "Authorization",
-      get5_remote_log_header_value: `Bearer ${process.env.NEXTAUTH_SECRET}`,
+      get5_remote_log_header_value: `Bearer ${process.env.GET5_WEBHOOK_SECRET}`,
     },
   };
 

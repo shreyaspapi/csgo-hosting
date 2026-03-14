@@ -381,6 +381,7 @@ screen -dmS csgo ./srcds_run -game csgo -console -usercon +game_type 0 +game_mod
 sleep 30
 curl -X POST "${appUrl}/api/servers/ready" \\
   -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${process.env.GET5_WEBHOOK_SECRET}" \\
   -d '{"matchId": "${matchId}", "rconPassword": "${rconPassword}"}'
 `;
 }

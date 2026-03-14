@@ -5,6 +5,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 
@@ -26,74 +33,122 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="fixed left-0 top-0 z-50 flex h-screen w-64 flex-col bg-transparent p-12 lg:w-80">
-      {/* Logo / Game Title */}
-      <div className="mb-12">
-        <Link href="/" className="group block">
-          <h1 className="text-4xl font-black uppercase tracking-tighter text-foreground drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] group-hover:text-primary transition-colors">
-            FLUIDRUSH
-          </h1>
-          <div className="mt-1 h-1 w-12 bg-primary" />
-        </Link>
-      </div>
+    <nav className="sticky top-0 z-50 border-b border-white/8 bg-[rgba(18,20,22,0.86)] px-4 py-4 backdrop-blur-md lg:fixed lg:left-0 lg:top-0 lg:h-screen lg:w-[19rem] lg:border-b-0 lg:border-r lg:border-white/8 lg:bg-[var(--menu-panel)] lg:px-8 lg:py-10">
+      <div className="flex items-center justify-between lg:block">
+        <div className="mb-0 lg:mb-10">
+          <Link href="/" className="group block">
+            <div className="menu-title text-[0.68rem] text-muted-foreground">Matchmaking Interface</div>
+            <h1 className="mt-2 text-2xl font-black uppercase tracking-[0.26em] text-foreground transition-colors group-hover:text-primary lg:text-[2.6rem] lg:tracking-[0.38em]">
+              FLUIDRUSH
+            </h1>
+            <div className="menu-divider mt-3 w-24 lg:w-36" />
+          </Link>
+        </div>
 
-      {/* Main Menu Items */}
-      <div className="flex flex-col gap-4">
         {session ? (
-          <>
-            {navItems.map((item) => (
-              <Button
-                key={item.href}
-                variant="ghost"
-                render={<Link href={item.href} />}
-                className={cn(
-                  "justify-start text-2xl font-bold uppercase tracking-tight shadow-none hover:bg-transparent px-0 transition-all",
-                  pathname === item.href ? "text-primary translate-x-2" : "text-foreground"
-                )}
-              >
-                {item.label}
-              </Button>
-            ))}
-            
-            <div className="mt-8 border-t border-white/10 pt-8">
-               <div className="mb-4 flex items-center gap-3">
-                  <Avatar className="size-10 border border-[#555]">
-                    <AvatarImage src={session.user.image} alt={session.user.name} />
-                    <AvatarFallback>{session.user.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold uppercase">{session.user.name}</span>
-                    <Badge variant="outline" className="h-4 border-primary/50 bg-primary/10 px-1 text-[10px] text-primary">
-                      {session.user.elo} ELO
-                    </Badge>
-                  </div>
-               </div>
-
-               <Button
+          <div className="hidden lg:flex lg:h-[calc(100%-5.5rem)] lg:flex-col">
+            <div className="space-y-2">
+              {navItems.map((item) => (
+                <Button
+                  key={item.href}
                   variant="ghost"
-                  onSelect={() => signOut({ callbackUrl: "/" })}
-                  className="justify-start text-xl font-bold uppercase tracking-tight text-muted-foreground hover:bg-transparent hover:text-destructive px-0"
+                  render={<Link href={item.href} />}
+                  className={cn(
+                    "h-auto w-full justify-start border border-transparent px-3 py-3 text-left text-[0.95rem] font-bold uppercase tracking-[0.18em] text-[#d7d1c0] transition-all hover:border-primary/20 hover:bg-white/4 hover:text-primary",
+                    pathname === item.href && "border-primary/30 bg-white/6 text-primary shadow-[inset_0_0_0_1px_rgba(211,162,59,0.12)]"
+                  )}
                 >
-                  QUIT
+                  {item.label}
                 </Button>
+              ))}
             </div>
-          </>
-        ) : (
-          <Button 
-            render={<a href="/api/steam" />} 
-            className="mt-4 gap-2 border border-[#555] bg-gradient-to-b from-[#4c4c4c] to-[#3a3a3a] text-sm font-bold uppercase"
-          >
-            <SteamIcon />
-            Sign in with Steam
-          </Button>
-        )}
-      </div>
 
-      {/* Footer / Info */}
-      <div className="mt-auto text-[10px] font-mono text-muted-foreground/50 uppercase">
-        FluidRush V1.0.24 (VALVE)
-        <br />
-        Build: 2026.03.14
+            <div className="mt-auto border-t border-white/10 pt-6">
+              <div className="mb-4 flex items-center gap-3 rounded-[2px] border border-white/8 bg-black/18 px-3 py-3">
+                <Avatar className="size-11 border border-white/12">
+                  <AvatarImage src={session.user.image} alt={session.user.name} />
+                  <AvatarFallback>{session.user.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-bold uppercase tracking-[0.14em]">{session.user.name}</div>
+                  <Badge variant="outline" className="mt-1 border-primary/40 bg-primary/8 px-1.5 text-[10px] text-primary">
+                    {session.user.elo} ELO
+                  </Badge>
+                </div>
+              </div>
+
+              <Button
+                variant="ghost"
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="h-auto justify-start px-0 py-2 text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground hover:bg-transparent hover:text-destructive"
+              >
+                Quit Session
+              </Button>
+
+              <div className="mt-6 text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground/70">
+                FluidRush Source Build
+                <br />
+                Patch 2026.03.14
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="hidden lg:block">
+            <Button
+              render={<a href="/api/steam" />}
+              className="vgui-button mt-4 gap-2 px-4 py-3 text-sm"
+            >
+              <SteamIcon />
+              Sign in with Steam
+            </Button>
+          </div>
+        )}
+
+        <div className="lg:hidden">
+          {session ? (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="border-primary/30 bg-black/20 text-primary">
+                {session.user.elo} ELO
+              </Badge>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button variant="outline" size="icon" aria-label="Open menu">
+                      <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="18" x2="21" y2="18" />
+                      </svg>
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="w-48">
+                  {navItems.map((item) => (
+                    <DropdownMenuItem
+                      key={item.href}
+                      render={<Link href={item.href} />}
+                      className={cn(pathname === item.href && "text-primary")}
+                    >
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                  >
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <Button render={<a href="/api/steam" />} size="sm" className="vgui-button gap-2 px-3">
+              <SteamIcon />
+              Steam
+            </Button>
+          )}
+        </div>
       </div>
     </nav>
   );

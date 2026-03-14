@@ -6,31 +6,31 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center border-t border-l border-white/10 text-sm font-bold uppercase tracking-wider whitespace-nowrap transition-all outline-none select-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 shadow-[2px_2px_0px_rgba(0,0,0,0.5)] active:translate-y-[1px] active:translate-x-[1px] active:shadow-none",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-sm border text-sm font-bold uppercase whitespace-nowrap transition-all outline-none select-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: 
-          "bg-gradient-to-b from-[#4c4c4c] to-[#3a3a3a] text-foreground border border-[#555] hover:border-primary hover:text-primary shadow-[inset_1px_1px_0px_rgba(255,255,255,0.1)]",
+        default:
+          "vgui-button text-primary-foreground",
         outline:
-          "border border-border bg-transparent hover:bg-primary/10 hover:text-primary hover:border-primary",
+          "border-white/12 bg-[linear-gradient(180deg,rgba(82,85,79,0.78),rgba(44,46,43,0.92))] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:border-primary/35 hover:text-primary",
         secondary:
-          "bg-[#4a4a4a] text-foreground hover:bg-[#5a5a5a] border border-[#555]",
+          "border-white/10 bg-[linear-gradient(180deg,rgba(98,101,94,0.8),rgba(61,64,60,0.95))] text-secondary-foreground hover:text-primary",
         ghost:
-          "hover:text-primary hover:translate-x-1 border-none shadow-none active:translate-x-1.5 active:translate-y-0",
+          "border-transparent bg-transparent text-foreground hover:border-white/10 hover:bg-white/4 hover:text-primary",
         destructive:
-          "bg-gradient-to-b from-[#af3e3e] to-[#8a2e2e] text-white border border-[#9a3a3a] hover:brightness-110 shadow-[inset_1px_1px_0px_rgba(255,255,255,0.1)]",
-        link: "text-primary underline-offset-4 hover:underline border-none shadow-none",
+          "border-destructive/30 bg-[linear-gradient(180deg,rgba(128,72,61,0.85),rgba(89,46,39,0.95))] text-[#ffe5dd] hover:border-destructive/60 hover:text-white",
+        link: "border-transparent bg-transparent text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        xs: "h-6 px-2 text-xs",
-        sm: "h-7 px-3 text-[0.8rem]",
-        lg: "h-11 px-8 text-base",
-        icon: "size-9",
+        default: "h-9 gap-1.5 px-3 tracking-[0.12em]",
+        xs: "h-6 gap-1 px-2 text-[11px] tracking-[0.12em]",
+        sm: "h-8 gap-1 px-2.5 text-[11px] tracking-[0.12em]",
+        lg: "h-11 gap-2 px-4 text-[0.82rem] tracking-[0.18em]",
+        icon: "size-8",
         "icon-xs": "size-6",
         "icon-sm": "size-7",
-        "icon-lg": "size-11",
+        "icon-lg": "size-9",
       },
     },
     defaultVariants: {
@@ -48,8 +48,6 @@ function Button({
   nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  // When rendering as a non-button element (link, anchor), tell Base UI
-  // not to expect native <button> semantics to suppress the console warning.
   const resolvedNativeButton = nativeButton ?? (render ? false : undefined)
 
   return (
