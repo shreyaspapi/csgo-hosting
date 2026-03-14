@@ -37,7 +37,7 @@ export default async function Home({
 
   return (
     <div
-      className="relative flex h-screen w-screen items-center justify-center overflow-hidden"
+      className="relative h-screen w-screen overflow-hidden"
       style={{
         background: "linear-gradient(158deg, #72746e 0%, #4e5049 35%, #3d3f3a 65%, #585a52 100%)",
       }}
@@ -65,30 +65,30 @@ export default async function Home({
         style={{ background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.32))" }}
       />
 
-      {/* ── Giant CRT monitor — fills the viewport ── */}
+      {/* ── Giant CRT monitor — absolute, anchored top-left, fills viewport ── */}
       <div
-        className="relative z-10"
+        className="absolute z-10"
         style={{
           /*
-           * Drive by height so the monitor fills the full screen top-to-bottom.
-           * The 920:665 aspect ratio = 1.384. At 100vh height the width is
-           * ~138.4vw which overflows the sides slightly — that looks great,
-           * like the monitor is bigger than the viewport (immersive).
-           * Cap at 100vw min so on ultrawide it doesn't go insane.
+           * Pin to the top of the viewport. Width = 100vw.
+           * Height follows the SVG aspect ratio (920:530).
+           * Bottom overflow is hidden by the parent overflow-hidden.
+           * Top is NEVER clipped — it's pinned to top:0.
            */
-          height: "100vh",
-          width: "calc(100vh * 920 / 665)",
-          maxWidth: "none",
-          aspectRatio: "920 / 665",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "calc(100vw * 530 / 920)",
+          minHeight: "100vh",
         }}
       >
         {/* SVG monitor body */}
         <svg
-          viewBox="0 0 920 665"
+          viewBox="0 0 920 530"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="absolute inset-0 h-full w-full"
-          style={{ filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.5))" }}
+          style={{ filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.45))" }}
         >
           <defs>
             <filter id="sk" x="-2%" y="-2%" width="104%" height="104%">
@@ -124,81 +124,62 @@ export default async function Home({
             </linearGradient>
           </defs>
 
-          {/* Body depth */}
-          <rect x="52" y="24" width="800" height="496" rx="16" fill="#787670" filter="url(#sk)"/>
-          {/* Main body */}
-          <rect x="44" y="16" width="800" height="496" rx="14" fill="url(#body)" filter="url(#sk)"/>
+          {/* ── Body — taller now, fills 920×530 viewBox ── */}
+          {/* Depth shadow */}
+          <rect x="52" y="8"  width="816" height="522" rx="16" fill="#787670" filter="url(#sk)"/>
+          {/* Main casing */}
+          <rect x="44" y="0"  width="816" height="522" rx="14" fill="url(#body)" filter="url(#sk)"/>
           {/* Top highlight */}
-          <rect x="44" y="16" width="800" height="9" rx="12" fill="rgba(255,255,255,0.26)" filter="url(#sk)"/>
+          <rect x="44" y="0"  width="816" height="9"   rx="12" fill="rgba(255,255,255,0.26)" filter="url(#sk)"/>
           {/* Right shade */}
-          <rect x="830" y="28" width="14" height="470" rx="4" fill="rgba(0,0,0,0.1)" filter="url(#sk)"/>
+          <rect x="846" y="12" width="14" height="498" rx="4"  fill="rgba(0,0,0,0.1)"  filter="url(#sk)"/>
           {/* Bottom shade */}
-          <rect x="44" y="498" width="800" height="14" rx="4" fill="rgba(0,0,0,0.14)" filter="url(#sk)"/>
+          <rect x="44"  y="514" width="816" height="8"  rx="4"  fill="rgba(0,0,0,0.18)" filter="url(#sk)"/>
 
-          {/* Bezel */}
-          <rect x="108" y="46" width="682" height="430" rx="10" fill="#2a2820" filter="url(#skH)"/>
-          <rect x="116" y="54" width="666" height="416" rx="6"  fill="#1a1810" filter="url(#sk)"/>
+          {/* ── Bezel — screen takes up most of the body ── */}
+          <rect x="44"  y="0"   width="816" height="482" rx="10" fill="#2a2820" filter="url(#skH)"/>
+          <rect x="52"  y="8"   width="800" height="466" rx="6"  fill="#1a1810" filter="url(#sk)"/>
 
-          {/* Screen */}
-          <rect x="122" y="60" width="654" height="404" rx="4" fill="url(#screenGrad)"/>
-          <rect x="122" y="60" width="654" height="404" rx="4" fill="url(#sl)" opacity="0.75"/>
-          <rect x="122" y="60" width="654" height="404" rx="4" fill="url(#edgeDark)"/>
-          <rect x="122" y="60" width="654" height="404" rx="4" fill="url(#glare)"/>
-          <rect x="122" y="60" width="654" height="404" rx="4"
-            fill="none" stroke="rgba(50,130,40,0.18)" strokeWidth="2.5"/>
+          {/* ── Screen — very large, central ── */}
+          <rect x="60"  y="16"  width="784" height="450" rx="6" fill="url(#screenGrad)"/>
+          <rect x="60"  y="16"  width="784" height="450" rx="6" fill="url(#sl)" opacity="0.75"/>
+          <rect x="60"  y="16"  width="784" height="450" rx="6" fill="url(#edgeDark)"/>
+          <rect x="60"  y="16"  width="784" height="450" rx="6" fill="url(#glare)"/>
+          <rect x="60"  y="16"  width="784" height="450" rx="6"
+            fill="none" stroke="rgba(50,130,40,0.16)" strokeWidth="2"/>
 
-          {/* Control strip */}
-          <line x1="108" y1="476" x2="790" y2="476" stroke="rgba(0,0,0,0.16)" strokeWidth="1.5" filter="url(#sk)"/>
-          <line x1="108" y1="478" x2="790" y2="478" stroke="rgba(255,255,255,0.09)" strokeWidth="1" filter="url(#sk)"/>
+          {/* ── Thin control strip at bottom of casing ── */}
+          <line x1="44"  y1="482" x2="860" y2="482" stroke="rgba(0,0,0,0.18)" strokeWidth="1.5" filter="url(#sk)"/>
+          <line x1="44"  y1="484" x2="860" y2="484" stroke="rgba(255,255,255,0.08)" strokeWidth="1"  filter="url(#sk)"/>
 
-          {/* Brand */}
-          <text x="449" y="493" textAnchor="middle"
-            fontFamily="'Arial Narrow',Arial,sans-serif" fontSize="8.5" fontWeight="bold"
-            letterSpacing="3.5" fill="rgba(86,82,72,0.9)" filter="url(#sk)">
+          {/* Brand label */}
+          <text x="460" y="507" textAnchor="middle"
+            fontFamily="'Arial Narrow',Arial,sans-serif" fontSize="9" fontWeight="bold"
+            letterSpacing="4" fill="rgba(86,82,72,0.85)" filter="url(#sk)">
             FLUIDRUSH
           </text>
 
           {/* Power LED */}
-          <circle cx="748" cy="490" r="5.5" fill="#182216" filter="url(#sk)"/>
-          <circle cx="748" cy="490" r="3.5" fill="#33bb44"
+          <circle cx="792" cy="503" r="5.5" fill="#182216" filter="url(#sk)"/>
+          <circle cx="792" cy="503" r="3.5" fill="#33bb44"
             style={{filter:"drop-shadow(0 0 4px rgba(50,180,60,0.9))"}}/>
 
           {/* Buttons */}
-          <rect x="762" y="484" width="22" height="11" rx="2" fill="#bcbaa8" filter="url(#sk)"/>
-          <rect x="789" y="484" width="14" height="11" rx="2" fill="#bcbaa8" filter="url(#sk)"/>
+          <rect x="806" y="497" width="22" height="11" rx="2" fill="#bcbaa8" filter="url(#sk)"/>
+          <rect x="832" y="497" width="14" height="11" rx="2" fill="#bcbaa8" filter="url(#sk)"/>
 
           {/* Dial */}
-          <circle cx="130" cy="490" r="13" fill="#a8a694" filter="url(#sk)"/>
-          <circle cx="130" cy="490" r="9"  fill="#969482" filter="url(#sk)"/>
-          <circle cx="130" cy="490" r="2.5" fill="#6a6858" filter="url(#sk)"/>
-          <line x1="130" y1="483" x2="130" y2="487" stroke="#565444" strokeWidth="1.5"/>
+          <circle cx="78"  cy="503" r="13" fill="#a8a694" filter="url(#sk)"/>
+          <circle cx="78"  cy="503" r="9"  fill="#969482" filter="url(#sk)"/>
+          <circle cx="78"  cy="503" r="2.5" fill="#6a6858" filter="url(#sk)"/>
+          <line   x1="78"  y1="496" x2="78" y2="500" stroke="#565444" strokeWidth="1.5"/>
 
           {/* Volume bar */}
-          <rect x="152" y="486" width="84" height="7" rx="2" fill="#a09e8c" filter="url(#sk)"/>
+          <rect x="100" y="499" width="84" height="7" rx="2" fill="#a09e8c" filter="url(#sk)"/>
           {[0,11,22,33,44,55,66].map((i) => (
-            <rect key={i} x={153+i} y={487} width={9} height={5} rx="1"
+            <rect key={i} x={101+i} y={500} width={9} height={5} rx="1"
               fill={i <= 44 ? "#5a8a56" : "#808070"} filter="url(#sk)"/>
           ))}
-
-          {/* Neck */}
-          <path d="M366 514 C354 526 336 542 328 560 L580 560 C570 542 554 526 542 514 Z"
-            fill="#a8a694" filter="url(#skH)"/>
-          <path d="M382 514 L370 560" stroke="rgba(0,0,0,0.12)" strokeWidth="2.5" fill="none"/>
-          <path d="M526 514 L536 560" stroke="rgba(0,0,0,0.12)" strokeWidth="2.5" fill="none"/>
-
-          {/* Base */}
-          <ellipse cx="454" cy="564" rx="164" ry="18" fill="#a0a090" filter="url(#skH)"/>
-          <ellipse cx="454" cy="574" rx="182" ry="15" fill="#909082" filter="url(#skH)"/>
-          <ellipse cx="454" cy="582" rx="194" ry="11" fill="#808072" filter="url(#skH)"/>
-          <ellipse cx="454" cy="588" rx="202" ry="8"  fill="#706e60" filter="url(#skH)"/>
-
-          {/* Cables */}
-          <path d="M168 514 Q152 560 146 594 Q140 618 150 634"
-            stroke="#4a4840" strokeWidth="6" strokeLinecap="round" fill="none" filter="url(#skH)"/>
-          <path d="M746 514 Q762 556 768 584 Q774 608 762 628"
-            stroke="#4a4840" strokeWidth="4" strokeLinecap="round" fill="none" filter="url(#skH)"/>
-          <path d="M454 596 Q457 630 462 656 Q465 664 476 668"
-            stroke="#38362e" strokeWidth="7" strokeLinecap="round" fill="none" filter="url(#skH)"/>
 
           {/* Sketch hatching on body side */}
           {Array.from({length:14}, (_, i) => (
@@ -210,16 +191,16 @@ export default async function Home({
         </svg>
 
         {/* ── Content inside screen ──────────────────────────────────────────
-            Screen SVG rect: x=122, y=60, w=654, h=404 inside 920×665 viewBox
-            As % of container: left=13.3%, top=9.0%, right=14.9%, bottom=30.1%
+            Screen SVG rect: x=60, y=16, w=784, h=450 inside 920×530 viewBox
+            As % of container: left=6.5%, top=3.0%, right=8.3%, bottom=12.1%
         ── */}
         <div
           className="absolute flex items-center justify-center overflow-hidden"
           style={{
-            left:   "13.3%",
-            top:    "9.0%",
-            right:  "14.9%",
-            bottom: "30.1%",
+            left:   "6.5%",
+            top:    "3.0%",
+            right:  "8.3%",
+            bottom: "12.1%",
           }}
         >
           {/* Phosphor bloom */}
