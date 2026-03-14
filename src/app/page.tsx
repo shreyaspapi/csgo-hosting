@@ -43,7 +43,7 @@ export default async function Home({
      * no sidebar. AppShell also skips the padding offset for unauth users.
      * This div therefore gets the full viewport canvas.
      */
-    <div className="relative flex h-screen w-screen items-center overflow-hidden">
+    <div className="relative flex h-screen w-screen items-center justify-center overflow-hidden">
 
       {/* ── Background accent — subtle left-side glow matching VGUI mood ── */}
       <div
@@ -56,8 +56,8 @@ export default async function Home({
       />
 
       {/* ── Content — left-aligned, matching the original VGUI panel feel ── */}
-      <div className="relative z-10 px-8 sm:px-14 lg:px-20">
-        <div className="w-full max-w-xl">
+      <div className="relative z-10 w-full max-w-xl px-6">
+        <div className="w-full">
 
           {/* Error banner */}
           {errorMsg && (
@@ -68,8 +68,16 @@ export default async function Home({
             </div>
           )}
 
-          {/* The VGUI panel */}
-          <div className="vgui-panel p-8 lg:p-10">
+          {/* The VGUI panel — use the site background color, just a clean border */}
+          <div
+            className="p-8 lg:p-10"
+            style={{
+              background: "var(--background)",
+              border: "1px solid rgba(199,194,173,0.14)",
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.04), 0 24px 60px rgba(0,0,0,0.55)",
+            }}
+          >
 
             {/* Eyebrow */}
             <div className="menu-title text-[0.68rem] text-primary">
