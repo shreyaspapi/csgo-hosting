@@ -65,10 +65,22 @@ export default async function Home({
         style={{ background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.32))" }}
       />
 
-      {/* ── Giant CRT monitor ── */}
+      {/* ── Giant CRT monitor — fills the viewport ── */}
       <div
         className="relative z-10"
-        style={{ width: "min(90vw, 960px)", aspectRatio: "920 / 665" }}
+        style={{
+          /*
+           * Drive by height so the monitor fills the full screen top-to-bottom.
+           * The 920:665 aspect ratio = 1.384. At 100vh height the width is
+           * ~138.4vw which overflows the sides slightly — that looks great,
+           * like the monitor is bigger than the viewport (immersive).
+           * Cap at 100vw min so on ultrawide it doesn't go insane.
+           */
+          height: "100vh",
+          width: "calc(100vh * 920 / 665)",
+          maxWidth: "none",
+          aspectRatio: "920 / 665",
+        }}
       >
         {/* SVG monitor body */}
         <svg
@@ -76,7 +88,7 @@ export default async function Home({
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="absolute inset-0 h-full w-full"
-          style={{ filter: "drop-shadow(0 32px 64px rgba(0,0,0,0.65))" }}
+          style={{ filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.5))" }}
         >
           <defs>
             <filter id="sk" x="-2%" y="-2%" width="104%" height="104%">
@@ -220,7 +232,7 @@ export default async function Home({
           />
 
           {/* UI */}
-          <div className="relative z-20 w-full max-w-[470px] px-8 py-1 text-left">
+          <div className="relative z-20 w-full px-[7%] py-1 text-left">
 
             {errorMsg && (
               <div className="mb-3 border border-red-500/40 bg-red-950/30 px-3 py-2">
