@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ──────────────────────────────────────────────────────────
+model User {
+  id          String   @id @default(cuid())
+  steamId     String   @unique
+  displayName String
+  avatar      String   // Steam avatar URL
+  avatarFull  String?  // Full-size avatar
+  profileUrl  String?
+  elo         Int      @default(1000)
+  wins        Int      @default(0)
+  losses      Int      @default(0)
+  draws       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  queueEntry    QueueEntry?
+  matchPlayers  MatchPlayer[]
+  captainOf     Team[]        @relation("TeamCaptain")
+  teamMembers   TeamMember[]
+  readyChecks   ReadyCheck[]
+
+  @@index([elo])
+  @@index([steamId])
+}
+
+// ─── Teams ──────────────────────────────────────────────────────────
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  tag       String?  // Short clan tag
+  captainId String
+  captain   User     @relation("TeamCaptain", fields: [captainId], references: [id])
+  createdAt DateTime @default(now())
+
+  members     TeamMember[]
+  queueEntry  QueueEntry?
+
+  @@index([captainId])
+}
+
+model TeamMember {
+  id       String @id @default(cuid())
+  teamId   String
+  userId   String
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id])
+  joinedAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+// ─── Queue System ───────────────────────────────────────────────────
+enum QueueType {
+  SOLO
+  TEAM
+}
+
+enum QueueStatus {
+  WAITING       // In queue, waiting for match
+  MATCHED       // Match found, waiting for ready check
+  READY         // Accepted ready check
+  IN_MATCH      // Currently playing
+}
+
+model QueueEntry {
+  id        String      @id @default(cuid())
+  userId    String?     @unique // For solo queue
+  teamId    String?     @unique // For team queue
+  type      QueueType
+  status    QueueStatus @default(WAITING)
+  region    String      @default("centralindia") // Azure region
+  joinedAt  DateTime    @default(now())
+
+  user      User?       @relation(fields: [userId], references: [id])
+  team      Team?       @relation(fields: [teamId], references: [id])
+  matchId   String?     // Set when matched
+  match     Match?      @relation(fields: [matchId], references: [id])
+
+  @@index([type, status, region])
+  @@index([joinedAt])
+}
+
+// ─── Ready Check ────────────────────────────────────────────────────
+enum ReadyStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model ReadyCheck {
+  id        String      @id @default(cuid())
+  matchId   String
+  userId    String
+  status    ReadyStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  expiresAt DateTime
+
+  match     Match       @relation(fields: [matchId], references: [id])
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@unique([matchId, userId])
+  @@index([matchId, status])
+}
+
+// ─── Matches ────────────────────────────────────────────────────────
+enum MatchStatus {
+  READY_CHECK    // Waiting for all players to accept
+  CONFIGURING    // Setting up the server
+  WARMUP         // Server ready, players joining
+  KNIFE          // Knife round
+  LIVE           // Match is live
+  FINISHED       // Match completed
+  CANCELLED      // Match cancelled (player didn't accept, etc.)
+}
+
+model Match {
+  id            String      @id @default(cuid())
+  status        MatchStatus @default(READY_CHECK)
+  map           String      @default("de_dust2")
+  region        String      @default("centralindia")
+  
+  // Server info
+  serverId      String?
+  serverIp      String?
+  serverPort    Int?
+  connectString String?     // steam://connect/ip:port/password
+  gotv          String?     // GOTV connect string
+
+  // Scores
+  scoreTeamA    Int         @default(0)
+  scoreTeamB    Int         @default(0)
+
+  // Timestamps
+  createdAt     DateTime    @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+
+  // Relations
+  players       MatchPlayer[]
+  server        GameServer?  @relation(fields: [serverId], references: [id])
+  queueEntries  QueueEntry[]
+  readyChecks   ReadyCheck[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum MatchTeam {
+  TEAM_A
+  TEAM_B
+}
+
+model MatchPlayer {
+  id       String    @id @default(cuid())
+  matchId  String
+  userId   String
+  team     MatchTeam
+  isCaptain Boolean  @default(false)
+
+  // Stats (updated after match)
+  kills    Int       @default(0)
+  deaths   Int       @default(0)
+  assists  Int       @default(0)
+  mvps     Int       @default(0)
+  score    Int       @default(0)
+  eloChange Int      @default(0)
+
+  match    Match     @relation(fields: [matchId], references: [id])
+  user     User      @relation(fields: [userId], references: [id])
+
+  @@unique([matchId, userId])
+  @@index([userId])
+}
+
+// ─── Game Servers ───────────────────────────────────────────────────
+enum ServerStatus {
+  PROVISIONING  // VM being created
+  STARTING      // VM started, server booting
+  AVAILABLE     // Ready for a match
+  IN_USE        // Running a match
+  STOPPING      // Being shut down
+  STOPPED       // VM deallocated (can be restarted)
+  ERROR         // Something went wrong
+}
+
+model GameServer {
+  id              String       @id @default(cuid())
+  name            String       // e.g., "Mumbai-1"
+  region          String       @default("centralindia")
+  
+  // Azure resource info
+  azureVmId       String?      // Azure VM resource ID
+  azureVmName     String?
+  resourceGroup   String?
+
+  // Network
+  ip              String?
+  port            Int          @default(27015)
+  rconPassword    String?
+  serverPassword  String?      // Connect password for the match
+
+  // Status
+  status          ServerStatus @default(PROVISIONING)
+  currentMatchId  String?
+  
+  // Timestamps
+  createdAt       DateTime     @default(now())
+  lastUsedAt      DateTime?
+  
+  // Relations
+  matches         Match[]
+
+  @@index([status, region])
+  @@index([azureVmName])
+}
