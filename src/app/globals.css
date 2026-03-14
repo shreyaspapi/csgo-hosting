@@ -68,17 +68,12 @@
 
   body {
     @apply bg-background font-sans text-foreground;
+    /* Pure CSS atmospheric background — no external images */
     background-image:
-      linear-gradient(90deg, rgba(10, 10, 10, 0.78), rgba(10, 10, 10, 0.18)),
-      url("/valve-bald-guy.png"),
-      radial-gradient(circle at 15% 20%, rgba(163, 171, 144, 0.22), transparent 24%),
-      radial-gradient(circle at 78% 14%, rgba(210, 162, 59, 0.1), transparent 20%),
-      linear-gradient(120deg, rgba(8, 9, 10, 0.76), rgba(17, 19, 21, 0.92)),
-      url("https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2070&auto=format&fit=crop");
-    background-size: 42rem auto, 42rem auto, cover, cover, cover, cover;
-    background-position: right -4rem bottom 0, right -4rem bottom 0, center top, center top, center top, center top;
-    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-    background-blend-mode: screen, normal, normal, normal, normal, normal;
+      radial-gradient(ellipse 120% 60% at 100% 0%, rgba(16, 40, 20, 0.55), transparent 55%),
+      radial-gradient(ellipse 80% 50% at 0% 100%, rgba(211, 162, 59, 0.05), transparent 50%),
+      radial-gradient(ellipse 60% 40% at 50% 50%, rgba(12, 18, 14, 0.3), transparent 70%),
+      linear-gradient(170deg, #09090b 0%, #0c0f0d 40%, #0a0c0b 100%);
     background-attachment: fixed;
     text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
   }
