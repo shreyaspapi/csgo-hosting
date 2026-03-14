@@ -97,7 +97,7 @@ export default function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Button render={<a href="/api/auth/steam" />} className="gap-2">
+          <Button render={<a href="/api/steam" />} className="gap-2">
             <SteamIcon />
             Sign in with Steam
           </Button>
