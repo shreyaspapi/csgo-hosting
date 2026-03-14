@@ -2,113 +2,147 @@
 
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-import Image from "next/image";
-import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+const NAV_LINKS = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/queue", label: "Play" },
+  { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/teams", label: "Teams" },
+] as const;
+
+function SteamIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 256 259"
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M128.007 0C58.652 0 2.076 53.308.085 121.392l68.91 28.49c5.857-3.981 12.91-6.327 20.51-6.327.68 0 1.348.028 2.01.07l30.711-44.468v-.624c0-26.644 21.69-48.335 48.336-48.335 26.644 0 48.334 21.691 48.334 48.372 0 26.645-21.69 48.336-48.37 48.336h-1.12l-43.752 31.24c0 .53.036 1.058.036 1.573 0 19.96-16.222 36.2-36.2 36.2-17.654 0-32.39-12.71-35.559-29.467L4.535 163.57C22.608 217.32 71.026 258.372 128.007 258.372c70.69 0 127.993-57.303 127.993-128.004C256 59.36 198.697 0 128.007 0zM80.45 207.805l-15.617-6.455c2.77 5.77 7.596 10.636 13.924 13.437 13.724 6.074 29.768-.282 35.842-14.006 2.934-6.631 2.978-13.9.114-20.571-2.858-6.67-8.168-11.86-14.8-14.8-6.545-2.89-13.56-2.77-19.71-.398l16.148 6.68c10.11 4.476 14.668 16.366 10.185 26.47-4.477 10.105-16.353 14.663-26.486 10.188v-.545zm113.113-98.452c0-17.738-14.444-32.188-32.224-32.188-17.745 0-32.189 14.45-32.189 32.188 0 17.745 14.444 32.189 32.189 32.189 17.78 0 32.224-14.444 32.224-32.189zm-56.346.063c0-13.418 10.87-24.29 24.19-24.29 13.37 0 24.196 10.872 24.196 24.29 0 13.38-10.826 24.253-24.196 24.253-13.32 0-24.19-10.873-24.19-24.253z" />
+    </svg>
+  );
+}
 
 export default function Navbar() {
   const { data: session } = useSession();
-  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center font-bold text-sm">
-              FR
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
-              FluidRush
-            </span>
-          </Link>
+    <nav
+      className={cn(
+        "sticky top-0 z-50 w-full border-b border-border/40",
+        "bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60"
+      )}
+    >
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-600 text-sm font-bold text-white shadow-lg shadow-orange-500/20">
+            FR
+          </div>
+          <span className="text-xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
+            FluidRush
+          </span>
+        </Link>
 
-          {/* Nav Links */}
-          {session && (
-            <div className="hidden md:flex items-center gap-6">
-              <Link
-                href="/dashboard"
-                className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
+        {/* Nav Links - hidden on mobile */}
+        {session && (
+          <div className="hidden md:flex items-center gap-1">
+            {NAV_LINKS.map(({ href, label }) => (
+              <Button
+                key={href}
+                variant="ghost"
+                size="sm"
+                render={<Link href={href} />}
               >
-                Dashboard
-              </Link>
-              <Link
-                href="/queue"
-                className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
-              >
-                Play
-              </Link>
-              <Link
-                href="/leaderboard"
-                className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
-              >
-                Leaderboard
-              </Link>
-              <Link
-                href="/teams"
-                className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
-              >
-                Teams
-              </Link>
-            </div>
-          )}
+                {label}
+              </Button>
+            ))}
+          </div>
+        )}
 
-          {/* User Menu */}
-          {session ? (
-            <div className="relative">
-              <button
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="flex items-center gap-3 bg-gray-800 rounded-lg px-3 py-2 hover:bg-gray-700 transition-colors"
-              >
-                <Image
-                  src={session.user.image}
-                  alt={session.user.name}
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
-                <div className="hidden sm:block text-left">
-                  <p className="text-sm font-medium">{session.user.name}</p>
-                  <p className="text-xs text-orange-400">
-                    ELO: {session.user.elo}
-                  </p>
-                </div>
-              </button>
-
-              {menuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-700 py-1">
-                  <Link
-                    href="/dashboard"
-                    className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Profile
-                  </Link>
-                  <button
-                    onClick={() => signOut({ callbackUrl: "/" })}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <a
-              href="/api/auth/steam"
-              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+        {/* Right side */}
+        {session ? (
+          <div className="flex items-center gap-3">
+            {/* ELO Badge - visible on sm+ */}
+            <Badge
+              variant="outline"
+              className="hidden sm:inline-flex border-orange-500/30 bg-orange-500/10 text-orange-400"
             >
-              <svg
-                viewBox="0 0 24 24"
-                className="w-5 h-5"
-                fill="currentColor"
+              ELO {session.user.elo}
+            </Badge>
+
+            {/* User Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg px-2 py-1.5",
+                  "bg-muted/50 hover:bg-muted transition-colors",
+                  "outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                )}
               >
-                <path d="M12 2C6.48 2 2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3l-.5 3H13v6.95c5.05-.5 9-4.76 9-9.95 0-5.52-4.48-10-10-10z" />
-              </svg>
-              Sign in with Steam
-            </a>
-          )}
-        </div>
+                <Avatar size="sm">
+                  <AvatarImage
+                    src={session.user.image}
+                    alt={session.user.name}
+                  />
+                  <AvatarFallback>
+                    {session.user.name?.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden sm:block text-sm font-medium text-foreground">
+                  {session.user.name}
+                </span>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" sideOffset={8} className="w-48">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-sm font-medium text-foreground">
+                      {session.user.name}
+                    </p>
+                    <p className="text-xs text-orange-400">
+                      ELO: {session.user.elo}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem render={<Link href="/dashboard" />}>
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => signOut({ callbackUrl: "/" })}
+                >
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            render={<a href="/api/auth/steam" />}
+            className="gap-2"
+          >
+            <SteamIcon className="size-4" />
+            Sign in with Steam
+          </Button>
+        )}
       </div>
     </nav>
   );

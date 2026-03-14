@@ -2,8 +2,29 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import Navbar from "@/components/Navbar";
+
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+} from "@/components/ui/avatar";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface LeaderboardPlayer {
   id: string;
@@ -17,6 +38,56 @@ interface LeaderboardPlayer {
   rank: number;
   totalMatches: number;
   winRate: number;
+}
+
+const RANK_STYLES: Record<number, { badge: string; row: string; icon: string }> = {
+  1: {
+    badge: "border-yellow-500/40 bg-yellow-500/15 text-yellow-400",
+    row: "bg-yellow-500/5",
+    icon: "🥇",
+  },
+  2: {
+    badge: "border-gray-400/40 bg-gray-400/15 text-gray-300",
+    row: "bg-gray-400/5",
+    icon: "🥈",
+  },
+  3: {
+    badge: "border-orange-700/40 bg-orange-700/15 text-orange-400",
+    row: "bg-orange-700/5",
+    icon: "🥉",
+  },
+};
+
+function SkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 10 }).map((_, i) => (
+        <TableRow key={i}>
+          <TableCell>
+            <Skeleton className="h-5 w-8" />
+          </TableCell>
+          <TableCell>
+            <div className="flex items-center gap-3">
+              <Skeleton className="size-8 rounded-full" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-12 mx-auto" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-8 mx-auto" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-8 mx-auto" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-10 mx-auto" />
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
 }
 
 export default function LeaderboardPage() {
@@ -34,93 +105,130 @@ export default function LeaderboardPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  const getRankStyle = (rank: number) => {
-    if (rank === 1)
-      return "bg-yellow-500/10 border-yellow-500/30 text-yellow-400";
-    if (rank === 2)
-      return "bg-gray-400/10 border-gray-400/30 text-gray-300";
-    if (rank === 3)
-      return "bg-orange-700/10 border-orange-700/30 text-orange-400";
-    return "bg-gray-900 border-gray-800 text-gray-400";
-  };
-
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-center mb-2">Leaderboard</h1>
-        <p className="text-gray-400 text-center mb-10">
-          Top players ranked by ELO
-        </p>
+      <div className="mx-auto max-w-4xl px-4 py-12">
+        <div className="mb-10 text-center">
+          <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
+          <p className="mt-2 text-muted-foreground">
+            Top players ranked by ELO
+          </p>
+        </div>
 
-        {loading ? (
-          <div className="text-center text-gray-400 py-12">
-            Loading leaderboard...
-          </div>
-        ) : players.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">
-            <p className="text-lg mb-2">No players yet</p>
-            <p className="text-sm">
-              Be the first to play a match and appear on the leaderboard!
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {/* Header */}
-            <div className="grid grid-cols-[60px_1fr_80px_80px_80px_80px] gap-4 px-4 py-2 text-xs text-gray-500 font-medium uppercase">
-              <div>Rank</div>
-              <div>Player</div>
-              <div className="text-center">ELO</div>
-              <div className="text-center">W</div>
-              <div className="text-center">L</div>
-              <div className="text-center">Win %</div>
-            </div>
-
-            {/* Players */}
-            {players.map((player) => (
-              <div
-                key={player.id}
-                className={`grid grid-cols-[60px_1fr_80px_80px_80px_80px] gap-4 items-center px-4 py-3 rounded-lg border transition-colors ${getRankStyle(player.rank)} ${
-                  session?.user?.id === player.id
-                    ? "ring-1 ring-orange-500/50"
-                    : ""
-                }`}
-              >
-                <div className="font-bold text-lg">#{player.rank}</div>
-                <div className="flex items-center gap-3 min-w-0">
-                  <Image
-                    src={player.avatar}
-                    alt={player.displayName}
-                    width={36}
-                    height={36}
-                    className="rounded-full"
-                  />
-                  <span className="font-medium truncate text-white">
-                    {player.displayName}
-                  </span>
-                  {session?.user?.id === player.id && (
-                    <span className="text-xs bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded shrink-0">
-                      You
-                    </span>
-                  )}
-                </div>
-                <div className="text-center font-bold text-orange-400">
-                  {player.elo}
-                </div>
-                <div className="text-center text-green-400">
-                  {player.wins}
-                </div>
-                <div className="text-center text-red-400">
-                  {player.losses}
-                </div>
-                <div className="text-center text-white">
-                  {player.winRate}%
-                </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Rankings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!loading && players.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-lg text-muted-foreground">No players yet</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Be the first to play a match and appear on the leaderboard!
+                </p>
               </div>
-            ))}
-          </div>
-        )}
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">Rank</TableHead>
+                    <TableHead>Player</TableHead>
+                    <TableHead className="text-center">ELO</TableHead>
+                    <TableHead className="text-center">Wins</TableHead>
+                    <TableHead className="text-center">Losses</TableHead>
+                    <TableHead className="text-center">Win Rate</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <SkeletonRows />
+                  ) : (
+                    players.map((player) => {
+                      const isCurrentUser = session?.user?.id === player.id;
+                      const rankStyle = RANK_STYLES[player.rank];
+
+                      return (
+                        <TableRow
+                          key={player.id}
+                          className={`
+                            ${rankStyle?.row ?? ""}
+                            ${isCurrentUser ? "ring-1 ring-primary/50 ring-inset" : ""}
+                          `}
+                        >
+                          {/* Rank */}
+                          <TableCell>
+                            {rankStyle ? (
+                              <Badge
+                                variant="outline"
+                                className={`font-bold ${rankStyle.badge}`}
+                              >
+                                {rankStyle.icon} #{player.rank}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground font-medium pl-1">
+                                #{player.rank}
+                              </span>
+                            )}
+                          </TableCell>
+
+                          {/* Player */}
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar size="default">
+                                <AvatarImage
+                                  src={player.avatar}
+                                  alt={player.displayName}
+                                />
+                                <AvatarFallback>
+                                  {player.displayName.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium truncate max-w-[200px]">
+                                {player.displayName}
+                              </span>
+                              {isCurrentUser && (
+                                <Badge
+                                  variant="outline"
+                                  className="border-primary/30 bg-primary/10 text-primary"
+                                >
+                                  You
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* ELO */}
+                          <TableCell className="text-center">
+                            <span className="font-bold text-primary">
+                              {player.elo}
+                            </span>
+                          </TableCell>
+
+                          {/* Wins */}
+                          <TableCell className="text-center text-green-400">
+                            {player.wins}
+                          </TableCell>
+
+                          {/* Losses */}
+                          <TableCell className="text-center text-red-400">
+                            {player.losses}
+                          </TableCell>
+
+                          {/* Win Rate */}
+                          <TableCell className="text-center">
+                            {player.winRate}%
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

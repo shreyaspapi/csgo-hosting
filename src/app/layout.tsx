@@ -2,19 +2,14 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
-import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { Geist } from "next/font/google";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
+  variable: "--font-mono",
   weight: "100 900",
 });
 
@@ -32,7 +27,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("dark", "font-sans", geist.variable)}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-white min-h-screen`}
+        className={cn(
+          geist.variable,
+          geistMono.variable,
+          "antialiased min-h-screen font-sans"
+        )}
       >
         <Providers>{children}</Providers>
       </body>
