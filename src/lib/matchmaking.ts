@@ -3,7 +3,8 @@ import { QueueType, MatchStatus, MatchTeam } from "@prisma/client";
 import { COMPETITIVE_MAPS, DEFAULT_MATCH_MAP } from "@/lib/maps";
 import { TEAM_SIZE } from "@/lib/teams";
 
-const PLAYERS_PER_MATCH = 10;
+// Can be set to 2 for dev/testing, 10 for production
+const PLAYERS_PER_MATCH = parseInt(process.env.MATCH_THRESHOLD ?? "10", 10);
 const READY_CHECK_TIMEOUT_SECONDS = 30;
 
 interface QueuedPlayer {

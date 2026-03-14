@@ -335,27 +335,76 @@ export default function QueuePage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">LOCK</TableHead>
-                    <TableHead>SERVER NAME</TableHead>
-                    <TableHead className="w-24">PLAYERS</TableHead>
-                    <TableHead className="w-32">REGION</TableHead>
-                    <TableHead className="w-20 text-right">ELO</TableHead>
+                    <TableHead className="w-8"></TableHead>
+                    <TableHead>QUEUE</TableHead>
+                    <TableHead className="w-28 text-center">SEARCHING</TableHead>
+                    <TableHead className="w-28">REGION</TableHead>
+                    <TableHead className="w-20 text-right">MODE</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow data-state={queueMode === "SOLO" ? "selected" : "" } onClick={() => setQueueMode("SOLO")}>
-                    <TableCell className="text-center">🔓</TableCell>
-                    <TableCell className="font-bold text-primary">FluidRush Solo Queue #1</TableCell>
-                    <TableCell>{stats.soloCount} / 10</TableCell>
-                    <TableCell className="uppercase">{region}</TableCell>
-                    <TableCell className="text-right">AUTO</TableCell>
+                  {/* Solo Queue row */}
+                  <TableRow
+                    data-state={queueMode === "SOLO" ? "selected" : ""}
+                    onClick={() => setQueueMode("SOLO")}
+                    className="cursor-pointer"
+                  >
+                    <TableCell className="text-center text-[11px]">
+                      {stats.soloCount > 0
+                        ? <span className="inline-block h-2 w-2 rounded-full bg-green-400 animate-pulse" style={{boxShadow:"0 0 5px #4ade80"}} />
+                        : <span className="inline-block h-2 w-2 rounded-full bg-[#444]" />
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-bold text-primary">Solo Matchmaking</div>
+                      <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-wide">
+                        ELO-balanced · Captain draft · 128-tick
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className={cn("font-mono font-bold text-sm tabular-nums", stats.soloCount > 0 ? "text-green-400" : "text-muted-foreground")}>
+                        {stats.soloCount}
+                      </span>
+                      <span className="text-muted-foreground text-xs font-mono">
+                        /{process.env.NEXT_PUBLIC_MATCH_THRESHOLD ?? "10"}
+                      </span>
+                      <div className="text-[9px] text-muted-foreground font-mono uppercase mt-0.5">
+                        {stats.soloCount === 0 ? "no one searching" : stats.soloCount === 1 ? "1 player searching" : `${stats.soloCount} players searching`}
+                      </div>
+                    </TableCell>
+                    <TableCell className="uppercase text-[11px] font-mono text-muted-foreground">{region}</TableCell>
+                    <TableCell className="text-right text-[11px] font-mono text-muted-foreground">SOLO</TableCell>
                   </TableRow>
-                  <TableRow data-state={queueMode === "TEAM" ? "selected" : "" } onClick={() => setQueueMode("TEAM")}>
-                    <TableCell className="text-center">🔒</TableCell>
-                    <TableCell className="font-bold text-primary">FluidRush Team Scrim #1</TableCell>
-                    <TableCell>{stats.teamCount} / 2</TableCell>
-                    <TableCell className="uppercase">{region}</TableCell>
-                    <TableCell className="text-right">TEAM</TableCell>
+
+                  {/* Team Queue row */}
+                  <TableRow
+                    data-state={queueMode === "TEAM" ? "selected" : ""}
+                    onClick={() => setQueueMode("TEAM")}
+                    className="cursor-pointer"
+                  >
+                    <TableCell className="text-center text-[11px]">
+                      {stats.teamCount > 0
+                        ? <span className="inline-block h-2 w-2 rounded-full bg-green-400 animate-pulse" style={{boxShadow:"0 0 5px #4ade80"}} />
+                        : <span className="inline-block h-2 w-2 rounded-full bg-[#444]" />
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-bold text-primary">Team Scrim</div>
+                      <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-wide">
+                        5v5 pre-made teams · Requires full roster
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className={cn("font-mono font-bold text-sm tabular-nums", stats.teamCount > 0 ? "text-green-400" : "text-muted-foreground")}>
+                        {stats.teamCount}
+                      </span>
+                      <span className="text-muted-foreground text-xs font-mono">/2</span>
+                      <div className="text-[9px] text-muted-foreground font-mono uppercase mt-0.5">
+                        {stats.teamCount === 0 ? "no teams searching" : `${stats.teamCount} team${stats.teamCount > 1 ? "s" : ""} searching`}
+                      </div>
+                    </TableCell>
+                    <TableCell className="uppercase text-[11px] font-mono text-muted-foreground">{region}</TableCell>
+                    <TableCell className="text-right text-[11px] font-mono text-muted-foreground">5V5</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -427,11 +476,11 @@ export default function QueuePage() {
                     {log}
                   </div>
                 ))}
-                {queueState === "queuing" && (
-                  <div className="text-primary animate-pulse mt-1">
-                    [SEARCHING] ELAPSED: {fmt(elapsed)} ...
-                  </div>
-                )}
+                 {queueState === "queuing" && (
+                   <div className="text-primary animate-pulse mt-1">
+                     [SEARCHING] {stats.soloCount} / {process.env.NEXT_PUBLIC_MATCH_THRESHOLD ?? "10"} players · ELAPSED: {fmt(elapsed)} ...
+                   </div>
+                 )}
              </div>
 
              {/* Region Selector */}
@@ -448,14 +497,14 @@ export default function QueuePage() {
                 
                 <div className="grid grid-cols-2 gap-2 mt-4">
                    {queueState === "idle" ? (
-                     <Button className="w-full h-10 col-span-2" onClick={joinQueue} disabled={queueMode === "TEAM" && !teamCanQueue}>
-                       CONNECT
-                     </Button>
-                   ) : (
-                     <Button variant="destructive" className="w-full h-10 col-span-2" onClick={leaveQueue}>
-                       DISCONNECT
-                     </Button>
-                   )}
+                      <Button className="w-full h-10 col-span-2" onClick={joinQueue} disabled={queueMode === "TEAM" && !teamCanQueue}>
+                        FIND MATCH
+                      </Button>
+                    ) : (
+                      <Button variant="destructive" className="w-full h-10 col-span-2" onClick={leaveQueue}>
+                        CANCEL SEARCH
+                      </Button>
+                    )}
                 </div>
              </div>
           </div>
@@ -489,10 +538,13 @@ export default function QueuePage() {
                   <CardTitle className="text-[10px]">AUTHENTICATING PLAYERS</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 text-center space-y-4">
-                   <div className="text-2xl font-black text-primary font-mono">
-                     {acceptedCount} / 10
-                   </div>
-                   <Progress value={acceptedCount * 10} className="h-2 border border-[#444] bg-black/40 [&>div]:bg-primary" />
+                    <div className="text-2xl font-black text-primary font-mono">
+                      {acceptedCount} / {process.env.NEXT_PUBLIC_MATCH_THRESHOLD ?? "10"}
+                    </div>
+                    <Progress
+                      value={(acceptedCount / parseInt(process.env.NEXT_PUBLIC_MATCH_THRESHOLD ?? "10")) * 100}
+                      className="h-2 border border-[#444] bg-black/40 [&>div]:bg-primary"
+                    />
                    <p className="text-[10px] uppercase text-muted-foreground animate-pulse">Waiting for server response...</p>
                 </CardContent>
              </Card>
