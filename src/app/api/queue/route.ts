@@ -28,20 +28,14 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { type = "SOLO", region = "centralindia", teamId } = body;
 
-  // Check if user is already in queue
-  const existingEntry = await prisma.queueEntry.findFirst({
+  // Remove any stale queue entry first (handles DB unique constraint on userId)
+  // A stale entry can exist if the user closed the tab mid-queue
+  await prisma.queueEntry.deleteMany({
     where: {
       userId: session.user.id,
       status: { in: ["WAITING", "MATCHED"] },
     },
   });
-
-  if (existingEntry) {
-    return NextResponse.json(
-      { error: "Already in queue" },
-      { status: 400 }
-    );
-  }
 
   // Check if user is already in an active match
   const activeMatch = await prisma.matchPlayer.findFirst({

@@ -5,29 +5,56 @@ import { encode } from "next-auth/jwt";
 
 /**
  * GET /api/steam/callback
- * Steam redirects here after OpenID authentication.
- * We verify, upsert the user, mint a next-auth JWT, and redirect to dashboard.
+ *
+ * Steam OpenID redirects here after user authenticates.
+ * Flow: verify sig → fetch profile → upsert user → mint JWT cookie → /dashboard
+ *
+ * NOTE: Lives at /api/steam (not /api/auth/steam) because next-auth intercepts
+ * the entire /api/auth/* namespace.
  */
 export async function GET(req: NextRequest) {
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
+  // Extract all OpenID params Steam sent back
+  const params: Record<string, string> = {};
+  req.nextUrl.searchParams.forEach((value, key) => {
+    params[key] = value;
+  });
+
+  // Verify the OpenID response with Steam (server → Steam, checks sig + nonce)
+  let steamId: string | null = null;
   try {
-    const params: Record<string, string> = {};
-    req.nextUrl.searchParams.forEach((value, key) => {
-      params[key] = value;
-    });
+    steamId = await verifySteamOpenId(params);
+  } catch (err) {
+    console.error("[steam/callback] verification error:", err);
+    return NextResponse.redirect(`${baseUrl}/?error=steam_verify_failed`);
+  }
 
-    const steamId = await verifySteamOpenId(params);
-    if (!steamId) {
-      return NextResponse.redirect(`${baseUrl}/?error=steam_auth_failed`);
-    }
+  if (!steamId) {
+    // Common cause in dev: nonce expired during first cold-start compilation.
+    // Simply click "Sign in with Steam" again — it will work once compiled.
+    console.warn("[steam/callback] Steam verification failed for claimed_id:", params["openid.claimed_id"]);
+    return NextResponse.redirect(`${baseUrl}/?error=steam_auth_failed`);
+  }
 
-    const steamPlayer = await getSteamPlayer(steamId);
-    if (!steamPlayer) {
-      return NextResponse.redirect(`${baseUrl}/?error=steam_profile_failed`);
-    }
+  // Fetch Steam player profile
+  let steamPlayer;
+  try {
+    steamPlayer = await getSteamPlayer(steamId);
+  } catch (err) {
+    console.error("[steam/callback] getSteamPlayer error:", err);
+    return NextResponse.redirect(`${baseUrl}/?error=steam_profile_error`);
+  }
 
-    const user = await prisma.user.upsert({
+  if (!steamPlayer) {
+    console.error("[steam/callback] no player found for steamId:", steamId);
+    return NextResponse.redirect(`${baseUrl}/?error=steam_profile_failed`);
+  }
+
+  // Upsert user in database
+  let user;
+  try {
+    user = await prisma.user.upsert({
       where: { steamId },
       update: {
         displayName: steamPlayer.personaname,
@@ -43,8 +70,15 @@ export async function GET(req: NextRequest) {
         profileUrl: steamPlayer.profileurl,
       },
     });
+  } catch (err) {
+    console.error("[steam/callback] db upsert error:", err);
+    return NextResponse.redirect(`${baseUrl}/?error=db_error`);
+  }
 
-    const token = await encode({
+  // Mint a next-auth JWT so getServerSession works everywhere
+  let token: string;
+  try {
+    token = await encode({
       token: {
         sub: user.id,
         id: user.id,
@@ -54,26 +88,27 @@ export async function GET(req: NextRequest) {
         elo: user.elo,
       },
       secret: process.env.NEXTAUTH_SECRET!,
-      maxAge: 30 * 24 * 60 * 60,
+      maxAge: 30 * 24 * 60 * 60, // 30 days
     });
-
-    const isProduction = process.env.NODE_ENV === "production";
-    const cookieName = isProduction
-      ? "__Secure-next-auth.session-token"
-      : "next-auth.session-token";
-
-    const response = NextResponse.redirect(`${baseUrl}/dashboard`);
-    response.cookies.set(cookieName, token, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 30 * 24 * 60 * 60,
-    });
-
-    return response;
-  } catch (error) {
-    console.error("Steam callback error:", error);
-    return NextResponse.redirect(`${baseUrl}/?error=auth_error`);
+  } catch (err) {
+    console.error("[steam/callback] JWT encode error:", err);
+    return NextResponse.redirect(`${baseUrl}/?error=token_error`);
   }
+
+  // Set session cookie (same name next-auth uses so getServerSession reads it)
+  const isProduction = process.env.NODE_ENV === "production";
+  const cookieName = isProduction
+    ? "__Secure-next-auth.session-token"
+    : "next-auth.session-token";
+
+  const response = NextResponse.redirect(`${baseUrl}/dashboard`);
+  response.cookies.set(cookieName, token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 30 * 24 * 60 * 60,
+  });
+
+  return response;
 }
