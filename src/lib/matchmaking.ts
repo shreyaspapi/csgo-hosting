@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { QueueType, MatchStatus, MatchTeam } from "@prisma/client";
+import { COMPETITIVE_MAPS, DEFAULT_MATCH_MAP } from "@/lib/maps";
 
 const PLAYERS_PER_MATCH = 10;
 const READY_CHECK_TIMEOUT_SECONDS = 30;
@@ -108,7 +109,7 @@ export async function createMatch(
     data: {
       status: MatchStatus.READY_CHECK,
       region,
-      map: "de_dust2", // Default map, can be changed later with map voting
+      map: DEFAULT_MATCH_MAP,
       players: {
         create: [
           ...teamA.map((p, i) => ({
@@ -174,10 +175,15 @@ export async function acceptReadyCheck(
   const allReady = acceptedCount === totalCount;
 
   if (allReady) {
+    const selectedMap = await finalizeMatchMap(matchId);
+
     // Move match to CONFIGURING state
     await prisma.match.update({
       where: { id: matchId },
-      data: { status: MatchStatus.CONFIGURING },
+      data: {
+        status: MatchStatus.CONFIGURING,
+        map: selectedMap,
+      },
     });
 
     // Update all queue entries to IN_MATCH
@@ -332,4 +338,40 @@ export async function getQueueStats(region?: string) {
   ]);
 
   return { soloCount, teamCount, matchesToday };
+}
+
+export function resolveWinningMap(
+  votes: Array<{ map: string; userId: string }>
+): string {
+  const counts = new Map<string, number>();
+
+  for (const map of COMPETITIVE_MAPS) {
+    counts.set(map, 0);
+  }
+
+  for (const vote of votes) {
+    counts.set(vote.map, (counts.get(vote.map) ?? 0) + 1);
+  }
+
+  let winner = DEFAULT_MATCH_MAP;
+  let highestCount = -1;
+
+  for (const map of COMPETITIVE_MAPS) {
+    const count = counts.get(map) ?? 0;
+    if (count > highestCount) {
+      highestCount = count;
+      winner = map;
+    }
+  }
+
+  return winner;
+}
+
+export async function finalizeMatchMap(matchId: string): Promise<string> {
+  const votes = await prisma.mapVote.findMany({
+    where: { matchId },
+    select: { map: true, userId: true },
+  });
+
+  return resolveWinningMap(votes);
 }

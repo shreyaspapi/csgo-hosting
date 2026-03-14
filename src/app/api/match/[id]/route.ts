@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { COMPETITIVE_MAPS } from "@/lib/maps";
+import { resolveWinningMap } from "@/lib/matchmaking";
 
 /**
  * GET /api/match/[id] - Get match details
@@ -39,6 +41,13 @@ export async function GET(
           expiresAt: true,
         },
       },
+      mapVotes: {
+        select: {
+          userId: true,
+          map: true,
+          updatedAt: true,
+        },
+      },
       server: {
         select: {
           ip: true,
@@ -53,5 +62,19 @@ export async function GET(
     return NextResponse.json({ error: "Match not found" }, { status: 404 });
   }
 
-  return NextResponse.json(match);
+  const voteCounts = COMPETITIVE_MAPS.map((map) => ({
+    map,
+    votes: match.mapVotes.filter((vote) => vote.map === map).length,
+  }));
+
+  const selectedMap =
+    match.status === "READY_CHECK"
+      ? resolveWinningMap(match.mapVotes)
+      : match.map;
+
+  return NextResponse.json({
+    ...match,
+    selectedMap,
+    voteCounts,
+  });
 }
