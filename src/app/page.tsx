@@ -301,53 +301,52 @@ export default async function Home({
                 Initialize Steam Session
               </a>
 
-              <div className="flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.15em]"
-                style={{ color: "rgba(72,130,54,0.65)" }}>
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full"
-                    style={{ background: "#38b848", boxShadow: "0 0 5px #38b848" }}/>
+              <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.15em]"
+                style={{ color: "#8ec47a", textShadow: "0 0 6px rgba(80,180,60,0.25)" }}>
+                <span className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full"
+                    style={{ background: "#38b848", boxShadow: "0 0 6px #38b848" }}/>
                   Servers Online
                 </span>
-                <span style={{ color: "rgba(211,162,59,0.42)" }}>128 tick · Mumbai</span>
+                <span style={{ color: "#d3a23b", textShadow: "0 0 6px rgba(211,162,59,0.3)" }}>128 tick · Mumbai</span>
               </div>
             </div>
 
             {/* Support links */}
-            <div className="mt-3 flex items-center gap-3 font-mono text-[8px] uppercase tracking-[0.12em]"
-              style={{ color: "rgba(72,130,54,0.5)" }}>
-              <span style={{ color: "rgba(211,162,59,0.35)" }}>Support the project:</span>
+            <div className="mt-4 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.12em]">
+              <span style={{ color: "#b0a880" }}>Support the project:</span>
               <a
                 href="https://buymeacoffee.com/shreyaspapi"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="transition-colors hover:brightness-150"
-                style={{ color: "rgba(211,162,59,0.55)" }}
+                className="underline underline-offset-2 transition-colors hover:brightness-125"
+                style={{ color: "#d3a23b", textShadow: "0 0 6px rgba(211,162,59,0.25)" }}
               >
                 Buy me a coffee
               </a>
-              <span style={{ color: "rgba(72,130,54,0.25)" }}>|</span>
+              <span style={{ color: "#6a7a5a" }}>|</span>
               <a
                 href="https://discord.gg/XBVsuFUDDs"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="transition-colors hover:brightness-150"
-                style={{ color: "rgba(211,162,59,0.55)" }}
+                className="underline underline-offset-2 transition-colors hover:brightness-125"
+                style={{ color: "#d3a23b", textShadow: "0 0 6px rgba(211,162,59,0.25)" }}
               >
                 Discord
               </a>
-              <span style={{ color: "rgba(72,130,54,0.25)" }}>|</span>
+              <span style={{ color: "#6a7a5a" }}>|</span>
               <a
                 href="https://github.com/shreyaspapi/fluidrush"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="transition-colors hover:brightness-150"
-                style={{ color: "rgba(211,162,59,0.55)" }}
+                className="underline underline-offset-2 transition-colors hover:brightness-125"
+                style={{ color: "#d3a23b", textShadow: "0 0 6px rgba(211,162,59,0.25)" }}
               >
                 GitHub
               </a>
             </div>
-            <div className="mt-1.5 font-mono text-[7px] tracking-[0.08em]"
-              style={{ color: "rgba(72,130,54,0.35)" }}>
+            <div className="mt-2 font-mono text-[10px] tracking-[0.08em]"
+              style={{ color: "#8ec47a", textShadow: "0 0 4px rgba(80,180,60,0.15)" }}>
               ETH: 0x2F069F429d036aeBD2dC13de8B63C16AE9f8bB1a
             </div>
 
