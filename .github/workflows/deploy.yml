@@ -29,7 +29,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      - name: Build Next.js
+      - name: Build Next.js (standalone)
         run: npm run build
         env:
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
@@ -37,12 +37,15 @@ jobs:
           NEXT_PUBLIC_MATCH_THRESHOLD: ${{ secrets.NEXT_PUBLIC_MATCH_THRESHOLD }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      - name: Remove dev dependencies
-        run: npm prune --production
+      - name: Prepare standalone package
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public 2>/dev/null || true
+          cp prisma/schema.prisma .next/standalone/prisma/schema.prisma 2>/dev/null || mkdir -p .next/standalone/prisma && cp prisma/schema.prisma .next/standalone/prisma/
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: .
+          package: .next/standalone
