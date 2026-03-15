@@ -312,6 +312,45 @@ export default async function Home({
               </div>
             </div>
 
+            {/* Support links */}
+            <div className="mt-3 flex items-center gap-3 font-mono text-[8px] uppercase tracking-[0.12em]"
+              style={{ color: "rgba(72,130,54,0.5)" }}>
+              <span style={{ color: "rgba(211,162,59,0.35)" }}>Support the project:</span>
+              <a
+                href="https://buymeacoffee.com/shreyaspapi"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:brightness-150"
+                style={{ color: "rgba(211,162,59,0.55)" }}
+              >
+                Buy me a coffee
+              </a>
+              <span style={{ color: "rgba(72,130,54,0.25)" }}>|</span>
+              <a
+                href="https://discord.gg/XBVsuFUDDs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:brightness-150"
+                style={{ color: "rgba(211,162,59,0.55)" }}
+              >
+                Discord
+              </a>
+              <span style={{ color: "rgba(72,130,54,0.25)" }}>|</span>
+              <a
+                href="https://github.com/shreyaspapi/fluidrush"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:brightness-150"
+                style={{ color: "rgba(211,162,59,0.55)" }}
+              >
+                GitHub
+              </a>
+            </div>
+            <div className="mt-1.5 font-mono text-[7px] tracking-[0.08em]"
+              style={{ color: "rgba(72,130,54,0.35)" }}>
+              ETH: 0x2F069F429d036aeBD2dC13de8B63C16AE9f8bB1a
+            </div>
+
           </div>
         </div>
       </div>
