@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
@@ -32,6 +33,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <Script
+          defer
+          src="https://cloud.umami.is/script.js"
+          data-website-id="84193c60-f41a-440d-8394-8af70bc09440"
+          strategy="afterInteractive"
+        />
+      </head>
       <body className={cn(geistSans.variable, geistMono.variable, "valve-shell min-h-screen antialiased")}>
         <Providers>
           <Navbar />
