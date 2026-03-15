@@ -43,7 +43,7 @@ export default function Navbar() {
         <div className="mb-0 lg:mb-10">
           <Link href="/" className="group block">
             <div className="menu-title text-[0.68rem] text-muted-foreground">Matchmaking Interface</div>
-            <h1 className="mt-2 text-2xl font-black uppercase tracking-[0.26em] text-foreground transition-colors group-hover:text-primary lg:text-[2.6rem] lg:tracking-[0.38em]">
+            <h1 className="mt-2 text-2xl font-black uppercase tracking-[0.26em] text-foreground transition-colors group-hover:text-primary lg:text-[1.65rem] lg:tracking-[0.22em]">
               FLUIDRUSH
             </h1>
             <div className="menu-divider mt-3 w-24 lg:w-36" />
