@@ -131,6 +131,37 @@ export default async function DashboardPage() {
           ))}
         </div>
 
+        {/* Support banner */}
+        <Card className="mb-10 border-primary/20 bg-primary/5">
+          <CardContent className="flex flex-col items-center justify-between gap-3 py-4 sm:flex-row">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">&#9749;</span>
+              <div>
+                <p className="text-sm font-bold text-primary">Enjoying FluidRush?</p>
+                <p className="text-xs text-muted-foreground">Servers cost real money. Help keep the lights on.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <a
+                href="https://buymeacoffee.com/shreyaspapi"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded border border-primary/40 bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary transition-colors hover:bg-primary/20"
+              >
+                Buy me a coffee
+              </a>
+              <a
+                href="https://discord.gg/XBVsuFUDDs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+              >
+                Join Discord
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Recent matches */}
         <div>
           <h2 className="mb-4 text-xl font-bold">Recent Matches</h2>
