@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 import AppShell from "@/components/AppShell";
+import OnboardingGate from "@/components/OnboardingGate";
 import { cn } from "@/lib/utils";
 
 const geistSans = localFont({
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body className={cn(geistSans.variable, geistMono.variable, "valve-shell min-h-screen antialiased")}>
         <Providers>
           <Navbar />
+          <OnboardingGate />
           <AppShell>{children}</AppShell>
         </Providers>
       </body>

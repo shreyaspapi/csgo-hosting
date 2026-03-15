@@ -9,21 +9,23 @@ datasource db {
 
 // ─── Users ──────────────────────────────────────────────────────────
 model User {
-  id          String   @id @default(cuid())
-  steamId     String   @unique
-  displayName String
-  avatar      String   // Steam avatar URL
-  avatarFull  String?  // Full-size avatar
-  profileUrl  String?
-  elo         Int      @default(1000)
-  wins        Int      @default(0)
-  losses      Int      @default(0)
-  draws       Int      @default(0)
-  isBanned    Boolean  @default(false)
-  banReason   String?
-  vacBanned   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  steamId         String   @unique
+  displayName     String
+  avatar          String   // Steam avatar URL
+  avatarFull      String?  // Full-size avatar
+  profileUrl      String?
+  email           String?  // Collected on first login
+  preferredRegion String?  // Which region they plan to play in
+  elo             Int      @default(1000)
+  wins            Int      @default(0)
+  losses          Int      @default(0)
+  draws           Int      @default(0)
+  isBanned        Boolean  @default(false)
+  banReason       String?
+  vacBanned       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
   queueEntry      QueueEntry?

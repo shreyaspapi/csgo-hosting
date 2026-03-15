@@ -329,6 +329,25 @@ export default function QueuePage() {
         </div>
 
         <CardContent className="space-y-4 bg-[#222] p-4 font-sans">
+          {/* Experiment Banner */}
+          <div className="border border-primary/40 bg-primary/5 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" style={{boxShadow:"0 0 6px rgba(255,157,0,0.6)"}} />
+              <span className="text-xs font-black uppercase tracking-wide text-primary">Limited Experiment — March 19 - 23, 2026</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              FluidRush matchmaking is live as a <span className="text-[#e1e1e1] font-semibold">limited experiment from Thursday, March 19 through Sunday, March 23</span>.
+              Dedicated CS:GO servers are expensive, so we are testing the waters to see if there is enough interest to keep this running.
+              If matchmaking does not start outside these dates, that is expected — hang tight for the next window.
+            </p>
+            <div className="flex flex-wrap gap-3 mt-1">
+              <span className="text-[10px] font-mono uppercase bg-[#1a1a1a] border border-[#444] px-2 py-0.5 text-[#e1e1e1]">Mumbai — India</span>
+              <span className="text-[10px] font-mono uppercase bg-[#1a1a1a] border border-[#444] px-2 py-0.5 text-[#e1e1e1]">Singapore — SEA</span>
+              <span className="text-[10px] font-mono uppercase bg-[#1a1a1a] border border-[#444] px-2 py-0.5 text-[#e1e1e1]">Amsterdam — EU</span>
+              <span className="text-[10px] font-mono uppercase bg-[#1a1a1a] border border-[#444] px-2 py-0.5 text-[#e1e1e1]">Virginia — NA East</span>
+            </div>
+          </div>
+
           {/* Main List Area */}
           <div className="min-h-[300px] border border-[#444] bg-[#1a1a1a]">
             {activeTab === "INTERNET" && (
