@@ -16,9 +16,16 @@ import prisma from "@/lib/prisma";
  * Admin-only endpoint.
  */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  const forbidden = requireAdmin(session);
-  if (forbidden) return forbidden;
+  // Allow auth via either admin session OR CRON_SECRET bearer token
+  const authHeader = req.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET;
+  const isCronAuth = cronSecret && authHeader === `Bearer ${cronSecret}`;
+
+  if (!isCronAuth) {
+    const session = await getServerSession(authOptions);
+    const forbidden = requireAdmin(session);
+    if (forbidden) return forbidden;
+  }
 
   const { region = "centralindia", action = "provision", serverId } = await req.json();
 
