@@ -14,6 +14,7 @@ interface QueuedPlayer {
   displayName: string;
   avatar: string;
   elo: number;
+  partyId: string | null;
 }
 
 interface QueuedTeamMember {
@@ -71,9 +72,12 @@ export function calculateEloChange(
 }
 
 /**
- * Check if there are enough solo players in queue to create a match
+ * Check if there are enough solo players (including party members) in queue to create a match.
+ * Parties are kept together — we never split a party across matches.
+ * We greedily fill slots using a first-fit approach ordered by joinedAt.
  */
 export async function checkSoloQueue(region: string): Promise<QueuedPlayer[] | null> {
+  // Fetch more than we need so we have room to skip parties that don't fit
   const entries = await prisma.queueEntry.findMany({
     where: {
       type: QueueType.SOLO,
@@ -85,19 +89,58 @@ export async function checkSoloQueue(region: string): Promise<QueuedPlayer[] | n
       user: true,
     },
     orderBy: { joinedAt: "asc" },
-    take: PLAYERS_PER_MATCH,
+    take: PLAYERS_PER_MATCH * 3, // fetch extra to find fitting combinations
   });
 
   if (entries.length < PLAYERS_PER_MATCH) return null;
 
-  return entries.map((e) => ({
-    id: e.user!.id,
-    queueEntryId: e.id,
-    steamId: e.user!.steamId,
-    displayName: e.user!.displayName,
-    avatar: e.user!.avatar,
-    elo: e.user!.elo,
-  }));
+  // Group entries by party (null partyId = solo, each is its own group)
+  const groups: Array<{
+    partyId: string | null;
+    players: QueuedPlayer[];
+  }> = [];
+  const partyMap = new Map<string, QueuedPlayer[]>();
+
+  for (const e of entries) {
+    const player: QueuedPlayer = {
+      id: e.user!.id,
+      queueEntryId: e.id,
+      steamId: e.user!.steamId,
+      displayName: e.user!.displayName,
+      avatar: e.user!.avatar,
+      elo: e.user!.elo,
+      partyId: e.partyId,
+    };
+
+    if (e.partyId) {
+      if (!partyMap.has(e.partyId)) {
+        partyMap.set(e.partyId, []);
+      }
+      partyMap.get(e.partyId)!.push(player);
+    } else {
+      // Solo player = group of 1
+      groups.push({ partyId: null, players: [player] });
+    }
+  }
+
+  // Add party groups (only complete parties — all members must be WAITING)
+  for (const [partyId, players] of partyMap) {
+    groups.push({ partyId, players });
+  }
+
+  // Greedily fill match slots, preserving party integrity
+  const selected: QueuedPlayer[] = [];
+  for (const group of groups) {
+    if (selected.length >= PLAYERS_PER_MATCH) break;
+    if (selected.length + group.players.length <= PLAYERS_PER_MATCH) {
+      selected.push(...group.players);
+    }
+    // Skip groups that would overflow the match
+  }
+
+  if (selected.length < PLAYERS_PER_MATCH) return null;
+
+  return selected;
 }
 
 export async function checkTeamQueue(region: string): Promise<[QueuedTeam, QueuedTeam] | null> {
@@ -150,27 +193,73 @@ export async function checkTeamQueue(region: string): Promise<[QueuedTeam, Queue
 }
 
 /**
- * Balance teams based on ELO
- * Uses a greedy algorithm: sort by ELO, alternate assignment
+ * Balance teams based on ELO, keeping party members on the same team.
+ *
+ * Algorithm:
+ * 1. Group players into parties (solo = party of 1).
+ * 2. Sort party groups by total ELO descending.
+ * 3. Assign each group to the team with the lower total ELO (greedy bin-packing).
+ * 4. If a group doesn't fit (would exceed TEAM_SIZE), assign to the other team.
  */
 export function balanceTeams(
   players: QueuedPlayer[]
 ): { teamA: QueuedPlayer[]; teamB: QueuedPlayer[] } {
-  // Sort by ELO descending
-  const sorted = [...players].sort((a, b) => b.elo - a.elo);
+  // Group by partyId (null = solo, each gets its own group)
+  const partyGroups = new Map<string, QueuedPlayer[]>();
+  let soloIdx = 0;
+
+  for (const p of players) {
+    const key = p.partyId ?? `__solo_${soloIdx++}`;
+    if (!partyGroups.has(key)) partyGroups.set(key, []);
+    partyGroups.get(key)!.push(p);
+  }
+
+  // Sort groups by average ELO descending (biggest impact first)
+  const groups = [...partyGroups.values()].sort((a, b) => {
+    const avgA = a.reduce((s, p) => s + p.elo, 0) / a.length;
+    const avgB = b.reduce((s, p) => s + p.elo, 0) / b.length;
+    return avgB - avgA;
+  });
 
   const teamA: QueuedPlayer[] = [];
   const teamB: QueuedPlayer[] = [];
+  let eloA = 0;
+  let eloB = 0;
+  const halfSize = Math.ceil(players.length / 2);
 
-  // Snake draft: 1-2-2-2-1 pattern for fair distribution
-  for (let i = 0; i < sorted.length; i++) {
-    const round = Math.floor(i / 2);
-    if (round % 2 === 0) {
-      if (i % 2 === 0) teamA.push(sorted[i]);
-      else teamB.push(sorted[i]);
+  for (const group of groups) {
+    const groupElo = group.reduce((s, p) => s + p.elo, 0);
+
+    // Determine which team to assign to:
+    // Prefer the team with lower total ELO, but respect size constraints
+    const aCanFit = teamA.length + group.length <= halfSize;
+    const bCanFit = teamB.length + group.length <= halfSize;
+
+    if (aCanFit && bCanFit) {
+      // Both can fit — assign to team with lower ELO
+      if (eloA <= eloB) {
+        teamA.push(...group);
+        eloA += groupElo;
+      } else {
+        teamB.push(...group);
+        eloB += groupElo;
+      }
+    } else if (aCanFit) {
+      teamA.push(...group);
+      eloA += groupElo;
+    } else if (bCanFit) {
+      teamB.push(...group);
+      eloB += groupElo;
     } else {
-      if (i % 2 === 0) teamB.push(sorted[i]);
-      else teamA.push(sorted[i]);
+      // Shouldn't happen if parties are max 4 and match is 10,
+      // but fallback: put on team with fewer members
+      if (teamA.length <= teamB.length) {
+        teamA.push(...group);
+        eloA += groupElo;
+      } else {
+        teamB.push(...group);
+        eloB += groupElo;
+      }
     }
   }
 

@@ -51,6 +51,22 @@ interface CurrentTeam {
   } | null;
 }
 
+interface PartyMember {
+  id: string;
+  displayName: string;
+  avatar: string;
+  steamId: string;
+  elo: number;
+}
+
+interface SearchResult {
+  id: string;
+  displayName: string;
+  avatar: string;
+  steamId: string;
+  elo: number;
+}
+
 const REGIONS = [
   { value: "centralindia", label: "Mumbai", sub: "India — ~10ms" },
   { value: "southeastasia", label: "Singapore", sub: "SEA — ~40ms" },
@@ -76,11 +92,60 @@ export default function QueuePage() {
   const [team, setTeam] = useState<CurrentTeam | null>(null);
   const [logs, setLogs] = useState<string[]>(["FluidRush VGUI Initialized..."]);
 
+  // Party state
+  const [partyMembers, setPartyMembers] = useState<PartyMember[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const addLog = (msg: string) => {
     setLogs(prev => [...prev.slice(-10), `> ${msg}`]);
+  };
+
+  // Party search with debounce
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    searchDebounceRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          // Filter out users already in party
+          const partyIds = new Set(partyMembers.map((m) => m.id));
+          setSearchResults(data.users.filter((u: SearchResult) => !partyIds.has(u.id)));
+        }
+      } catch { /* silent */ }
+      setIsSearching(false);
+    }, 300);
+    return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
+  }, [searchQuery, partyMembers]);
+
+  const addToParty = (user: SearchResult) => {
+    if (partyMembers.length >= 3) {
+      addLog("ERROR: Party is full (max 4 including you)");
+      return;
+    }
+    setPartyMembers((prev) => [...prev, user]);
+    setSearchQuery("");
+    setSearchResults([]);
+    addLog(`${user.displayName} added to party`);
+  };
+
+  const removeFromParty = (userId: string) => {
+    setPartyMembers((prev) => {
+      const removed = prev.find((m) => m.id === userId);
+      if (removed) addLog(`${removed.displayName} removed from party`);
+      return prev.filter((m) => m.id !== userId);
+    });
   };
 
   useEffect(() => {
@@ -188,9 +253,16 @@ export default function QueuePage() {
   }, [queueMode, queueState]);
 
   const joinQueue = async () => {
-    addLog(`Initiating ${queueMode} matchmaking request...`);
+    const isParty = queueMode === "SOLO" && partyMembers.length > 0;
+    addLog(`Initiating ${isParty ? `party (${partyMembers.length + 1})` : queueMode} matchmaking request...`);
     try {
-      const payload = queueMode === "TEAM" ? { type: "TEAM", region, teamId: team?.id } : { type: "SOLO", region };
+      const payload = queueMode === "TEAM"
+        ? { type: "TEAM", region, teamId: team?.id }
+        : {
+            type: "SOLO",
+            region,
+            ...(partyMembers.length > 0 ? { partyMemberIds: partyMembers.map((m) => m.id) } : {}),
+          };
       const res = await fetch("/api/queue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -429,6 +501,85 @@ export default function QueuePage() {
               </Table>
             )}
 
+            {/* Party Builder (shown when SOLO mode is selected in INTERNET tab) */}
+            {activeTab === "INTERNET" && queueMode === "SOLO" && queueState === "idle" && (
+              <div className="border-t border-[#444] bg-[#1a1a1a] p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+                    Party ({partyMembers.length + 1}/4)
+                  </span>
+                  {partyMembers.length > 0 && (
+                    <button
+                      onClick={() => { setPartyMembers([]); addLog("Party cleared"); }}
+                      className="text-[9px] text-red-400 hover:text-red-300 uppercase font-mono"
+                    >
+                      Clear Party
+                    </button>
+                  )}
+                </div>
+
+                {/* Current party members */}
+                {partyMembers.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {partyMembers.map((m) => (
+                      <div
+                        key={m.id}
+                        className="flex items-center gap-1.5 bg-[#2a2a2a] border border-[#444] px-2 py-1 group"
+                      >
+                        <img src={m.avatar} alt="" className="w-4 h-4 rounded-sm" />
+                        <span className="text-[10px] text-[#e1e1e1] font-mono">{m.displayName}</span>
+                        <span className="text-[9px] text-muted-foreground font-mono">({m.elo})</span>
+                        <button
+                          onClick={() => removeFromParty(m.id)}
+                          className="text-[10px] text-red-500 hover:text-red-400 ml-1 opacity-50 group-hover:opacity-100"
+                        >
+                          X
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Search to add */}
+                {partyMembers.length < 3 && (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search players to add..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-[#0d0d0d] border border-[#444] text-[11px] text-[#e1e1e1] p-1.5 font-mono outline-none focus:border-primary placeholder:text-[#555]"
+                    />
+                    {isSearching && (
+                      <span className="absolute right-2 top-1.5 text-[9px] text-muted-foreground animate-pulse">...</span>
+                    )}
+                    {searchResults.length > 0 && (
+                      <div className="absolute z-20 w-full mt-0.5 bg-[#1a1a1a] border border-[#444] max-h-40 overflow-y-auto">
+                        {searchResults.map((u) => (
+                          <button
+                            key={u.id}
+                            onClick={() => addToParty(u)}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-[#333] border-b border-[#333] last:border-0"
+                          >
+                            <img src={u.avatar} alt="" className="w-5 h-5 rounded-sm" />
+                            <span className="text-[10px] text-[#e1e1e1] font-mono flex-1">{u.displayName}</span>
+                            <span className="text-[9px] text-muted-foreground font-mono">ELO {u.elo}</span>
+                            <span className="text-[9px] text-primary font-bold">+ ADD</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {partyMembers.length === 0 && (
+                  <p className="text-[9px] text-[#555] font-mono">
+                    Queue solo or add up to 3 friends. Party members stay on the same team.
+                  </p>
+                )}
+              </div>
+            )}
+
             {activeTab === "TEAM" && (
               <div className="p-4 space-y-4">
                 {!team ? (
@@ -495,11 +646,11 @@ export default function QueuePage() {
                     {log}
                   </div>
                 ))}
-                 {queueState === "queuing" && (
-                   <div className="text-primary animate-pulse mt-1">
-                     [SEARCHING] {stats.soloCount} / {process.env.NEXT_PUBLIC_MATCH_THRESHOLD ?? "10"} players · ELAPSED: {fmt(elapsed)} ...
-                   </div>
-                 )}
+                   {queueState === "queuing" && (
+                    <div className="text-primary animate-pulse mt-1">
+                      [SEARCHING] {stats.soloCount} / {process.env.NEXT_PUBLIC_MATCH_THRESHOLD ?? "10"} players · ELAPSED: {fmt(elapsed)}{partyMembers.length > 0 ? ` · PARTY(${partyMembers.length + 1})` : ""} ...
+                    </div>
+                  )}
              </div>
 
              {/* Region Selector */}
@@ -516,14 +667,14 @@ export default function QueuePage() {
                 
                 <div className="grid grid-cols-2 gap-2 mt-4">
                    {queueState === "idle" ? (
-                      <Button className="w-full h-10 col-span-2" onClick={joinQueue} disabled={queueMode === "TEAM" && !teamCanQueue}>
-                        FIND MATCH
-                      </Button>
-                    ) : (
-                      <Button variant="destructive" className="w-full h-10 col-span-2" onClick={leaveQueue}>
-                        CANCEL SEARCH
-                      </Button>
-                    )}
+                       <Button className="w-full h-10 col-span-2" onClick={joinQueue} disabled={queueMode === "TEAM" && !teamCanQueue}>
+                         {partyMembers.length > 0 ? `FIND MATCH (PARTY OF ${partyMembers.length + 1})` : "FIND MATCH"}
+                       </Button>
+                     ) : (
+                       <Button variant="destructive" className="w-full h-10 col-span-2" onClick={leaveQueue}>
+                         CANCEL SEARCH
+                       </Button>
+                     )}
                 </div>
              </div>
           </div>

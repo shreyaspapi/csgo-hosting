@@ -40,8 +40,10 @@ function getNetworkClient() {
 }
 
 const RESOURCE_GROUP = process.env.AZURE_RESOURCE_GROUP || "csgo-servers";
-const VM_SIZE = "Standard_D4s_v5"; // 4 vCPU, 16GB RAM
+const VM_SIZE = "Standard_D2s_v5"; // 2 vCPU, 8GB RAM — sufficient for 1 CS:GO server
 const SERVER_PORT = 27015;
+const ADMIN_USERNAME = "csgo";
+const SSH_PUBLIC_KEY = process.env.AZURE_SSH_PUBLIC_KEY || "";
 
 /**
  * Provision a game server for a match.
@@ -69,7 +71,10 @@ export async function provisionServer(
 }
 
 /**
- * Start a stopped VM and assign it to a match
+ * Start a stopped VM and assign it to a match.
+ *
+ * Since cloud-init only runs on first boot, we use Azure Run Command
+ * to write the match config and start the CS:GO server on restart.
  */
 async function startExistingServer(
   serverId: string,
@@ -77,12 +82,17 @@ async function startExistingServer(
 ): Promise<{ serverId: string; ip: string; port: number }> {
   const computeClient = getComputeClient();
 
-  // Mark server as starting
+  const rconPassword = process.env.DEFAULT_RCON_PASSWORD || generatePassword();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fluidrush.com";
+  const webhookSecret = process.env.GET5_WEBHOOK_SECRET || "";
+
+  // Mark server as starting and update rcon password
   const server = await prisma.gameServer.update({
     where: { id: serverId },
     data: {
       status: ServerStatus.STARTING,
       currentMatchId: matchId,
+      rconPassword,
     },
   });
 
@@ -96,12 +106,35 @@ async function startExistingServer(
     // Get the public IP
     const ip = await getVmPublicIp(server.azureVmName!);
 
+    // Use Azure Run Command to write match config and start the server
+    const matchConfig = JSON.stringify({
+      rcon_password: rconPassword,
+      webhook_url: `${appUrl}/api/get5/webhook`,
+      webhook_secret: webhookSecret,
+      match_id: matchId,
+      ready_url: `${appUrl}/api/servers/ready`,
+    });
+
+    await computeClient.virtualMachines.beginRunCommandAndWait(
+      RESOURCE_GROUP,
+      server.azureVmName!,
+      {
+        commandId: "RunShellScript",
+        script: [
+          `echo '${matchConfig.replace(/'/g, "'\\''")}' > /var/lib/fluidrush/match-config.json`,
+          `systemctl stop csgo.service 2>/dev/null || true`,
+          `/var/lib/cloud/scripts/per-boot/configure-csgo.sh`,
+        ],
+      }
+    );
+
     // Update server record
     await prisma.gameServer.update({
       where: { id: serverId },
       data: {
         status: ServerStatus.AVAILABLE,
         ip,
+        rconPassword,
         lastUsedAt: new Date(),
       },
     });
@@ -129,6 +162,7 @@ async function createNewServer(
   const vmName = `csgo-${region}-${Date.now()}`;
   const rconPassword =
     process.env.DEFAULT_RCON_PASSWORD || generatePassword();
+  const serverPassword = generatePassword(8); // Connect password for players
 
   // Create server record first
   const server = await prisma.gameServer.create({
@@ -139,6 +173,7 @@ async function createNewServer(
       resourceGroup: RESOURCE_GROUP,
       port: SERVER_PORT,
       rconPassword,
+      serverPassword,
       status: ServerStatus.PROVISIONING,
       currentMatchId: matchId,
     },
@@ -157,9 +192,8 @@ async function createNewServer(
     );
 
     // Create network interface
-    // NOTE: You must have a pre-existing VNet and Subnet in the resource group
-    // The subnet ID should be configured in env or fetched dynamically
     const subnetId = await getSubnetId(region);
+    const nsgId = await getNsgId(region);
 
     const nicResult = await networkClient.networkInterfaces.beginCreateOrUpdateAndWait(
       RESOURCE_GROUP,
@@ -174,13 +208,21 @@ async function createNewServer(
           },
         ],
         networkSecurityGroup: {
-          id: await getNsgId(region), // NSG with CS:GO ports open
+          id: nsgId,
         },
       }
     );
 
-    // Create VM from golden image
+    // Create VM from golden gallery image
+    // AZURE_VM_IMAGE_ID should be the full gallery image version ID, e.g.:
+    // /subscriptions/.../providers/Microsoft.Compute/galleries/fluidrushGallery/images/csgo-server/versions/1.0.0
     const imageId = process.env.AZURE_VM_IMAGE_ID!;
+    if (!imageId) {
+      throw new Error("AZURE_VM_IMAGE_ID is not set — cannot create game server VM");
+    }
+
+    // Generate cloud-init that writes the match config and triggers server start
+    const cloudInit = generateCloudInit(rconPassword, matchId);
 
     await computeClient.virtualMachines.beginCreateOrUpdateAndWait(
       RESOURCE_GROUP,
@@ -191,19 +233,38 @@ async function createNewServer(
         storageProfile: {
           imageReference: { id: imageId },
           osDisk: {
+            name: `${vmName}-osdisk`,
             createOption: "FromImage",
             managedDisk: { storageAccountType: "Premium_LRS" },
           },
         },
         osProfile: {
-          computerName: vmName,
-          adminUsername: "csgo",
-          customData: Buffer.from(
-            generateStartupScript(rconPassword, matchId)
-          ).toString("base64"),
+          computerName: vmName.substring(0, 15), // Azure limit: 15 chars
+          adminUsername: ADMIN_USERNAME,
+          linuxConfiguration: {
+            disablePasswordAuthentication: true,
+            ssh: {
+              publicKeys: SSH_PUBLIC_KEY
+                ? [
+                    {
+                      path: `/home/${ADMIN_USERNAME}/.ssh/authorized_keys`,
+                      keyData: SSH_PUBLIC_KEY,
+                    },
+                  ]
+                : undefined,
+            },
+          },
+          customData: Buffer.from(cloudInit).toString("base64"),
         },
         networkProfile: {
           networkInterfaces: [{ id: nicResult.id }],
+        },
+        securityProfile: {
+          securityType: "TrustedLaunch",
+          uefiSettings: {
+            secureBootEnabled: true,
+            vTpmEnabled: true,
+          },
         },
       }
     );
@@ -223,8 +284,11 @@ async function createNewServer(
       },
     });
 
-    // Wait for the CS:GO server to start (poll status)
-    // The startup script will update the server status via webhook
+    // The cloud-init boot script will:
+    //   1. Read /var/lib/fluidrush/match-config.json
+    //   2. Write rcon.cfg + get5_webhook.cfg
+    //   3. Start csgo.service
+    //   4. Call /api/servers/ready when port 27015 is up
     return { serverId: server.id, ip, port: SERVER_PORT };
   } catch (error) {
     console.error("Failed to create VM:", error);
@@ -354,35 +418,37 @@ async function getNsgId(region: string): Promise<string> {
 }
 
 /**
- * Generate startup script for the VM
- * This script starts the CS:GO server with proper configuration
+ * Generate cloud-init userdata for the VM.
+ *
+ * This writes a match-config.json file that the golden image's per-boot
+ * script (/var/lib/cloud/scripts/per-boot/configure-csgo.sh) reads to
+ * configure RCON, get5 webhook, start the CS:GO server, and call back
+ * to /api/servers/ready.
  */
-function generateStartupScript(
+function generateCloudInit(
   rconPassword: string,
   matchId: string
 ): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fluidrush.com";
+  const webhookSecret = process.env.GET5_WEBHOOK_SECRET || "";
 
-  return `#!/bin/bash
-# CS:GO Server Startup Script
-set -e
+  const matchConfig = JSON.stringify({
+    rcon_password: rconPassword,
+    webhook_url: `${appUrl}/api/get5/webhook`,
+    webhook_secret: webhookSecret,
+    match_id: matchId,
+    ready_url: `${appUrl}/api/servers/ready`,
+  });
 
-# Update RCON password
-echo 'rcon_password "${rconPassword}"' > /home/csgo/csgo-server/csgo/cfg/rcon.cfg
-
-# Configure get5 webhook
-echo 'get5_remote_log_url "${appUrl}/api/get5/webhook"' > /home/csgo/csgo-server/csgo/cfg/get5_webhook.cfg
-
-# Start CS:GO server
-cd /home/csgo/csgo-server
-screen -dmS csgo ./srcds_run -game csgo -console -usercon +game_type 0 +game_mode 1 +sv_setsteamaccount "" +mapgroup mg_active +map de_dust2 -port ${SERVER_PORT} +exec rcon.cfg +exec get5_webhook.cfg
-
-# Notify the web app that the server is ready
-sleep 30
-curl -X POST "${appUrl}/api/servers/ready" \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${process.env.GET5_WEBHOOK_SECRET}" \\
-  -d '{"matchId": "${matchId}", "rconPassword": "${rconPassword}"}'
+  // cloud-init format: write the config file, then the per-boot script picks it up
+  return `#cloud-config
+write_files:
+  - path: /var/lib/fluidrush/match-config.json
+    content: |
+      ${matchConfig}
+    permissions: '0644'
+runcmd:
+  - /var/lib/cloud/scripts/per-boot/configure-csgo.sh
 `;
 }
 

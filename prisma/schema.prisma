@@ -86,6 +86,7 @@ model QueueEntry {
   id        String      @id @default(cuid())
   userId    String?     @unique // For solo queue
   teamId    String?     @unique // For team queue
+  partyId   String?     // Shared ID for duo/trio/4-stack parties (null = true solo)
   type      QueueType
   status    QueueStatus @default(WAITING)
   region    String      @default("centralindia") // Azure region
@@ -98,6 +99,7 @@ model QueueEntry {
 
   @@index([type, status, region])
   @@index([joinedAt])
+  @@index([partyId])
 }
 
 // ─── Ready Check ────────────────────────────────────────────────────

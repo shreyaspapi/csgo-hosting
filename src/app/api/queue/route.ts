@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { QueueType } from "@prisma/client";
 import { checkSoloQueue, checkTeamQueue, createMatch, createTeamMatch, getQueueStats } from "@/lib/matchmaking";
 import { TEAM_SIZE } from "@/lib/teams";
+import crypto from "crypto";
 
 /**
  * GET /api/queue - Get current queue status
@@ -39,7 +40,19 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { type = "SOLO", region = "centralindia", teamId } = body;
+  const { type = "SOLO", region = "centralindia", teamId, partyMemberIds } = body;
+
+  // Validate partyMemberIds if provided (array of user IDs, max 3 others = 4-stack)
+  const MAX_PARTY_SIZE = 4;
+  if (partyMemberIds && !Array.isArray(partyMemberIds)) {
+    return NextResponse.json({ error: "partyMemberIds must be an array" }, { status: 400 });
+  }
+  if (partyMemberIds && partyMemberIds.length > MAX_PARTY_SIZE - 1) {
+    return NextResponse.json(
+      { error: `Party can have at most ${MAX_PARTY_SIZE} members (including you)` },
+      { status: 400 }
+    );
+  }
 
   // Check if user is already in an active match
   const activeMatch = await prisma.matchPlayer.findFirst({
@@ -164,7 +177,84 @@ export async function POST(req: NextRequest) {
     if (teams) {
       matchId = await createTeamMatch(teams[0], teams[1], region);
     }
+  } else if (partyMemberIds && partyMemberIds.length > 0) {
+    // ── Party queue (duo/trio/4-stack into solo pool) ──────────────
+    const allMemberIds = [session.user.id, ...partyMemberIds];
+    const partyId = crypto.randomUUID();
+
+    // Validate all party members exist and are not banned
+    const members = await prisma.user.findMany({
+      where: { id: { in: allMemberIds } },
+      select: { id: true, displayName: true, isBanned: true, banReason: true },
+    });
+
+    if (members.length !== allMemberIds.length) {
+      return NextResponse.json(
+        { error: "One or more party members not found" },
+        { status: 404 }
+      );
+    }
+
+    const banned = members.find((m) => m.isBanned);
+    if (banned) {
+      return NextResponse.json(
+        { error: `${banned.displayName} is banned and cannot queue` },
+        { status: 403 }
+      );
+    }
+
+    // Check no party member is in an active match
+    const activePartyMatches = await prisma.matchPlayer.count({
+      where: {
+        userId: { in: allMemberIds },
+        match: {
+          status: {
+            in: ["READY_CHECK", "CONFIGURING", "WARMUP", "KNIFE", "LIVE"],
+          },
+        },
+      },
+    });
+
+    if (activePartyMatches > 0) {
+      return NextResponse.json(
+        { error: "One or more party members are already in an active match" },
+        { status: 400 }
+      );
+    }
+
+    // Remove any stale queue entries for all party members
+    await prisma.queueEntry.deleteMany({
+      where: {
+        userId: { in: allMemberIds },
+        status: { in: ["WAITING", "MATCHED"] },
+      },
+    });
+
+    // Create a queue entry for each party member with shared partyId
+    const createdEntries = await Promise.all(
+      allMemberIds.map((userId) =>
+        prisma.queueEntry.create({
+          data: {
+            userId,
+            type: QueueType.SOLO,
+            region,
+            status: "WAITING",
+            partyId,
+          },
+        })
+      )
+    );
+
+    // The entry for the requesting user
+    entryId = createdEntries.find((e) => e.userId === session.user.id)?.id ?? createdEntries[0].id;
+
+    // Check if match can be formed
+    const players = await checkSoloQueue(region);
+    if (players) {
+      matchId = await createMatch(players, region);
+    }
   } else {
+    // ── True solo queue ───────────────────────────────────────────
     // Wrap solo queue join in a transaction to prevent race conditions
     const result = await prisma.$transaction(async (tx) => {
       // Remove any stale queue entry first (handles DB unique constraint on userId)
@@ -231,11 +321,31 @@ export async function POST(req: NextRequest) {
 
 /**
  * DELETE /api/queue - Leave the queue
+ * If the user is in a party, the entire party is removed from queue.
  */
 export async function DELETE(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check if user has a party queue entry — if so, remove the whole party
+  const userEntry = await prisma.queueEntry.findFirst({
+    where: {
+      userId: session.user.id,
+      status: "WAITING",
+    },
+  });
+
+  if (userEntry?.partyId) {
+    // Remove all party members from queue
+    await prisma.queueEntry.deleteMany({
+      where: {
+        partyId: userEntry.partyId,
+        status: "WAITING",
+      },
+    });
+    return NextResponse.json({ success: true });
   }
 
   const deletedSolo = await prisma.queueEntry.deleteMany({

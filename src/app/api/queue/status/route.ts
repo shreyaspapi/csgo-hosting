@@ -63,6 +63,7 @@ export async function GET() {
       status: "matched",
       type: activeEntry.type,
       teamId: activeEntry.teamId,
+      partyId: (activeEntry as typeof queueEntry)?.partyId ?? null,
       matchId: activeEntry.matchId,
       expiresAt: readyCheck?.expiresAt?.toISOString(),
       readyCheckStatus: readyCheck?.status,
@@ -73,6 +74,7 @@ export async function GET() {
     status: "waiting",
     type: activeEntry.type,
     teamId: activeEntry.teamId,
+    partyId: (activeEntry as typeof queueEntry)?.partyId ?? null,
     joinedAt: activeEntry.joinedAt.toISOString(),
   });
 }
