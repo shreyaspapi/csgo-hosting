@@ -432,12 +432,15 @@ function generateCloudInit(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://fluidrush.com";
   const webhookSecret = process.env.GET5_WEBHOOK_SECRET || "";
 
+  const gslt = process.env.CSGO_GSLT || "";
+
   const matchConfig = JSON.stringify({
     rcon_password: rconPassword,
     webhook_url: `${appUrl}/api/get5/webhook`,
     webhook_secret: webhookSecret,
     match_id: matchId,
     ready_url: `${appUrl}/api/servers/ready`,
+    gslt,
   });
 
   // cloud-init format: write the config file, then the per-boot script picks it up

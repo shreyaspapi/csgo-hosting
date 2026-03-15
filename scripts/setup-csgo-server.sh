@@ -250,6 +250,7 @@ WEBHOOK_URL=$(jq -r '.webhook_url' "$CONFIG_FILE")
 WEBHOOK_SECRET=$(jq -r '.webhook_secret' "$CONFIG_FILE")
 MATCH_ID=$(jq -r '.match_id' "$CONFIG_FILE")
 READY_URL=$(jq -r '.ready_url' "$CONFIG_FILE")
+GSLT=$(jq -r '.gslt // ""' "$CONFIG_FILE")
 
 # Write per-match configs
 echo "rcon_password \"${RCON_PASS}\"" > "${CSGO_DIR}/csgo/cfg/rcon.cfg"
@@ -259,6 +260,12 @@ get5_remote_log_url "${WEBHOOK_URL}"
 get5_remote_log_header_key "Authorization"
 get5_remote_log_header_value "Bearer ${WEBHOOK_SECRET}"
 EOF
+
+# Update systemd service with GSLT if provided
+if [ -n "$GSLT" ] && [ "$GSLT" != "null" ]; then
+  sed -i "s/+sv_setsteamaccount \"\"$/+sv_setsteamaccount ${GSLT}/" /etc/systemd/system/csgo.service
+  systemctl daemon-reload
+fi
 
 # Start the CS:GO server
 systemctl start csgo.service
